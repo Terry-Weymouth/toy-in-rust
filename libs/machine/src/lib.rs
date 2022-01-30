@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-pub use self::{external_env::*};
+pub use self::{external_env::*, program_reader::*};
 
 mod external_env;
+mod program_reader;
 
 #[derive(Debug)]
 pub struct Machine {

@@ -4,8 +4,21 @@
 // see: https://introcs.cs.princeton.edu/java/62toy/
 // see: https://introcs.cs.princeton.edu/java/64simulator/TOY.java.html
 
-fn main() {
-    println!("Nothing here!")
+use std::{
+    fs::File,
+    io::{self, BufRead, BufReader},
+    path::Path,
+};
+
+fn lines_from_file(filename: impl AsRef<Path>) -> io::Result<Vec<String>> {
+    BufReader::new(File::open(filename)?).lines().collect()
 }
 
+// ---
 
+fn main() {
+    let lines = lines_from_file("/etc/hosts").expect("Could not load lines");
+    for line in lines {
+        println!("{:?}", line);
+    }
+}
