@@ -1,12 +1,5 @@
-[package]
-name = "toy-in-rust"
-version = "0.1.0"
-edition = "2021"
-
 [workspace]
 members = [
     "libs/machine",
     "libs/wasm-interface"
 ]
-
-[dependencies]

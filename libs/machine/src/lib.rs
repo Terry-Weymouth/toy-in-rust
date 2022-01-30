@@ -2,23 +2,33 @@
 #![allow(unused_variables)]
 #![allow(unused_must_use)]
 
-#[derive(Debug)]
-pub struct InputHolder {
-    input_buffer: Vec<u16>,
-}
+extern crate core;
 
 #[derive(Debug)]
-pub struct OutputHolder {
-    output_buffer: Vec<u16>,
+pub struct ExternalEnv {
+    input: Vec<u16>,
+}
+
+impl ExternalEnv{
+    fn new(input: Vec<u16>) -> Self {
+        Self {
+            input
+        }
+    }
+    fn get_next_word(&mut self) -> Option<u16> {
+        if self.input.len() == 0 {
+            return None
+        }
+        let value = self.input.remove(0);
+        Option::from(value)
+    }
 }
 
 #[derive(Debug)]
 pub struct Machine {
     pc: u8,
     regs: [u16; 16],
-    memory: [u16; 256],
-    input: InputHolder,
-    output: OutputHolder,
+    memory: [u16; 256]
 }
 
 #[derive(Debug)]
@@ -30,45 +40,16 @@ pub struct Instruction {
     address: u8,
 }
 
-impl InputHolder{
-    fn new() -> Self{
-        let input_buffer = Vec::new();
-        Self {
-            input_buffer,
-        }
-    }
-    fn get_current_word(&mut self) -> Option<u16> {
-        if self.input_buffer.len() == 0 {
-            return None
-        }
-        let value = self.input_buffer.remove(0);
-        Option::from(value)
-    }
-}
-
-impl OutputHolder{
-    fn new() -> Self{
-        let output_buffer = Vec::new();
-        Self {
-            output_buffer,
-        }
-    }
-}
-
 impl Machine {
     fn new(program: &str) -> Self {
         print!("{}",program);
         let pc: u8 = 0;
-        let memory: [u16; 256] = [0; 256];
-        let regs: [u16; 16] = [0; 16];
-        let input= InputHolder::new();
-        let output = OutputHolder::new();
+        let mut memory: [u16; 256] = [0; 256];
+        let mut regs: [u16; 16] = [0; 16];
         Self {
             pc,
             regs,
             memory,
-            input,
-            output,
         }
     }
     fn set_program_counter(&mut self, pc: u8) {
@@ -99,25 +80,6 @@ impl Machine {
 
         true
     }
-    fn read_word_into_memory_255(&mut self) -> u16 {
-        let value = &self.input.get_current_word();
-        let mut ret: u16 = 0;
-        match value {
-            Some(value) => {
-                let mem = *value;
-                println!{"memory inside {:x}", self.memory[255]};
-                self.memory[255] = mem;
-                println!{"memory inside {:x}", self.memory[255]};
-                ret = mem;
-            },
-            None =>{
-            }
-        };
-        ret
-    }
-    fn write_word_from_memory_255(&self) {
-        todo!()
-    }
     fn alu_operation(&self, _instruction: &Instruction) {
         todo!()
     }
@@ -135,82 +97,82 @@ mod tests {
                 let pc: u8 = 0;
                 let memory: [u16; 256] = [0; 256];
                 let regs: [u16; 16] = [0; 16];
-                let mut input = InputHolder::new();
-                let output = OutputHolder::new();
-                let input_data = vec![0x1234 as u16, 0x2345, 0x3456, 0x4567];
-                for i in input_data{
-                    input.input_buffer.push(i);
-                }
                 Self {
                     pc,
                     regs,
-                    memory,
-                    input,
-                    output,
+                    memory
                 }
             }
         }
 
         #[test]
-        fn read() {
-            let mut machine = Machine::setup_for_test();
-            println!("memory before {:x}", machine.memory[225]);
-            let ret = &machine.read_word_into_memory_255();
-            println!("memory after {:x}", machine.memory[225]);
-            let expected =  0x1234 as u16;
-            assert_eq!(*ret, expected);
-            assert_eq!(machine.memory[225], expected)
+        fn initial_memory_is_zero() {
+            let machine = Machine::setup_for_test();
+            let sum_across_memory: u16 =
+                machine.memory.iter().sum();
+            assert_eq!(0, sum_across_memory);
         }
     }
+
     #[test]
     fn it_works() {
         let result = 2 + 2;
         assert_eq!(result, 4);
     }
 
-    #[test]
-    fn change_vec_at_index() {
-        struct Thing {
-            holder: Vec<u8>,
-        }
-        impl Thing{
-            fn new() -> Self{
-                let holder = vec![1, 2, 3, 4, 5, 6, 7, 8];
-                Self {
-                    holder,
-                }
-            }
-            fn set_value_at(&mut self, value: u8, index: usize){
-                std::mem::replace(&mut self.holder[index],value);
-            }
-        }
-        let mut thing = Thing::new();
-        assert_eq!(thing.holder[5], 6);
-        let value = 24 as u8;
-        thing.set_value_at(value, 5);
-        assert_eq!(thing.holder[5], 24);
-    }
+    mod read_from_extern_load_memory {
 
-    #[test]
-    fn change_array_at_index() {
-        struct Thing {
-            holder: [i32; 8],
+        struct MemoryHolder {
+            memory: [u16; 256],
         }
-        impl Thing{
-            fn new() -> Self{
-                let holder: [i32; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+        impl MemoryHolder {
+            fn new() -> Self {
+                let memory: [u16; 256] = [0; 256];
                 Self {
-                    holder,
+                    memory
                 }
             }
-            fn set_value_at(&mut self, value: i32, index: usize){
-                std::mem::replace(&mut self.holder[index],value);
+            fn set_memory_to_value(&mut self, index: usize, value: u16) {
+                assert!(index < 256);
+                self.memory[index] = value;
             }
         }
-        let mut thing = Thing::new();
-        assert_eq!(thing.holder[5], 6);
-        let value = 24;
-        thing.set_value_at(value, 5);
-        assert_eq!(thing.holder[5], 24);
+
+        struct ExternalSource{
+            input: Vec<u16>,
+        }
+        impl ExternalSource{
+            fn new(input: Vec<u16>) -> Self {
+                Self {
+                    input
+                }
+            }
+            fn get_next_word(&mut self) -> Option<u16> {
+                if self.input.len() == 0 {
+                    return None
+                }
+                let value = self.input.remove(0);
+                Option::from(value)
+            }
+        }
+
+        #[test]
+        fn test_load_memory_from_external() {
+            let mut machine = MemoryHolder::new();
+            let mut env = ExternalSource::new(vec![0x1234, 0x2345, 0x3456]);
+            let index = 5;
+            let opt_value = env.get_next_word();
+            match opt_value
+            {
+                Some(value) => {
+                    assert_eq!(0, machine.memory[index]);
+                    machine.set_memory_to_value(index, value);
+                    assert_eq!(0x1234, machine.memory[index]);
+                },
+                None =>{
+                    assert!(false)
+                }
+            };
+        }
     }
 }
