@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_must_use)]
+#![allow(unused_mut)]
 
 extern crate core;
 
@@ -28,7 +29,7 @@ impl ExternalEnv{
 pub struct Machine {
     pc: u8,
     regs: [u16; 16],
-    memory: [u16; 256]
+    memory: [u16; 256],
 }
 
 #[derive(Debug)]
@@ -41,8 +42,7 @@ pub struct Instruction {
 }
 
 impl Machine {
-    fn new(program: &str) -> Self {
-        print!("{}",program);
+    fn new() -> Self {
         let pc: u8 = 0;
         let mut memory: [u16; 256] = [0; 256];
         let mut regs: [u16; 16] = [0; 16];
@@ -83,6 +83,10 @@ impl Machine {
     fn alu_operation(&self, _instruction: &Instruction) {
         todo!()
     }
+    pub(crate) fn set_memory_word(&mut self, index: usize, value: u16) {
+        assert!(index < 256);
+        self.memory[index] = value;
+    }
 }
 
 #[cfg(test)]
@@ -92,32 +96,63 @@ mod tests {
     mod read_write_memory_255 {
         use super::*;
 
-        impl Machine {
-            fn setup_for_test() -> Self {
-                let pc: u8 = 0;
-                let memory: [u16; 256] = [0; 256];
-                let regs: [u16; 16] = [0; 16];
-                Self {
-                    pc,
-                    regs,
-                    memory
+        fn test_next_word(env: &mut ExternalEnv, expected: u16) {
+            let opt_value = env.get_next_word();
+            let mut word: u16 = 0;
+            match opt_value
+            {
+                Some(value) => {
+                    word = value;
+                },
+                None => {
+                    assert!(false)
                 }
             }
+            assert_eq!(expected, word);
         }
 
         #[test]
         fn initial_memory_is_zero() {
-            let machine = Machine::setup_for_test();
+            let machine = Machine::new();
             let sum_across_memory: u16 =
                 machine.memory.iter().sum();
             assert_eq!(0, sum_across_memory);
         }
-    }
 
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+        #[test]
+        fn read_from_env() {
+            let mut env = ExternalEnv::new(vec![0x1234, 0x2345, 0x3456]);
+            test_next_word(&mut env, 0x1234);
+            test_next_word(&mut env, 0x2345);
+            test_next_word(&mut env, 0x3456);
+        }
+
+        #[test]
+        fn write_word_from_env_to_memory() {
+            let mut machine = Machine::new();
+            let mut env = ExternalEnv::new(vec![0x0001, 0x0002, 0x0003]);
+            let sum_across_memory: u16 =
+                machine.memory.iter().sum();
+            assert_eq!(0, sum_across_memory);
+            let opt_value = env.get_next_word();
+            let mut word: u16 = 0;
+            match opt_value
+            {
+                Some(value) => {
+                    word = value;
+                },
+                None => {
+                    assert!(false)
+                }
+            }
+            let expected:u16 = 0x0001;
+            assert_eq!(expected, word);
+            let index = 255;
+            machine.set_memory_word(index, word);
+            let sum_across_memory: u16 =
+                machine.memory.iter().sum();
+            assert_eq!(1, sum_across_memory);
+        }
     }
 
     mod read_from_extern_load_memory {
@@ -172,7 +207,7 @@ mod tests {
                 None =>{
                     assert!(false)
                 }
-            };
+            }
         }
     }
 }
