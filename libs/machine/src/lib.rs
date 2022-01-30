@@ -3,27 +3,9 @@
 #![allow(unused_must_use)]
 #![allow(unused_mut)]
 
-extern crate core;
+pub use self::{external_env::*};
 
-#[derive(Debug)]
-pub struct ExternalEnv {
-    input: Vec<u16>,
-}
-
-impl ExternalEnv{
-    fn new(input: Vec<u16>) -> Self {
-        Self {
-            input
-        }
-    }
-    fn get_next_word(&mut self) -> Option<u16> {
-        if self.input.len() == 0 {
-            return None
-        }
-        let value = self.input.remove(0);
-        Option::from(value)
-    }
-}
+mod external_env;
 
 #[derive(Debug)]
 pub struct Machine {
@@ -87,16 +69,20 @@ impl Machine {
         assert!(index < 256);
         self.memory[index] = value;
     }
+    pub(crate) fn get_memory_word(&self, index: usize) -> u16 {
+        assert!(index < 256);
+        self.memory[index]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    mod read_write_memory_255 {
+    mod read_write_memory {
         use super::*;
 
-        fn test_next_word(env: &mut ExternalEnv, expected: u16) {
+        fn get_word_from_env(env: &mut ExternalEnv) -> u16{
             let opt_value = env.get_next_word();
             let mut word: u16 = 0;
             match opt_value
@@ -108,7 +94,19 @@ mod tests {
                     assert!(false)
                 }
             }
-            assert_eq!(expected, word);
+            word
+        }
+
+        fn test_new_word_env_to_mem(
+            env: &mut ExternalEnv, machine: &mut Machine,
+            index: usize, expected_value: u16, expected_sum: u16
+        ){
+            let word = get_word_from_env(env);
+            assert_eq!(expected_value, word);
+            machine.set_memory_word(index, word);
+            let sum_across_memory: u16 =
+                machine.memory.iter().sum();
+            assert_eq!(expected_sum, sum_across_memory);
         }
 
         #[test]
@@ -119,94 +117,49 @@ mod tests {
             assert_eq!(0, sum_across_memory);
         }
 
-        #[test]
-        fn read_from_env() {
-            let mut env = ExternalEnv::new(vec![0x1234, 0x2345, 0x3456]);
-            test_next_word(&mut env, 0x1234);
-            test_next_word(&mut env, 0x2345);
-            test_next_word(&mut env, 0x3456);
-        }
+        // test index out of bounds for size of memory todo!()
 
         #[test]
-        fn write_word_from_env_to_memory() {
+        fn read_word_from_env_load_to_memory() {
             let mut machine = Machine::new();
             let mut env = ExternalEnv::new(vec![0x0001, 0x0002, 0x0003]);
             let sum_across_memory: u16 =
                 machine.memory.iter().sum();
             assert_eq!(0, sum_across_memory);
-            let opt_value = env.get_next_word();
-            let mut word: u16 = 0;
-            match opt_value
-            {
-                Some(value) => {
-                    word = value;
-                },
-                None => {
-                    assert!(false)
-                }
-            }
-            let expected:u16 = 0x0001;
-            assert_eq!(expected, word);
-            let index = 255;
-            machine.set_memory_word(index, word);
+            test_new_word_env_to_mem(
+                &mut env, &mut machine,
+                100,0x0001, 1
+            );
+            test_new_word_env_to_mem(
+                &mut env, &mut machine,
+                120,0x0002, 3
+            );
+            test_new_word_env_to_mem(
+                &mut env, &mut machine,
+                255,0x0003, 6
+            );
+            machine.set_memory_word(100, 0);
             let sum_across_memory: u16 =
                 machine.memory.iter().sum();
-            assert_eq!(1, sum_across_memory);
+            assert_eq!(5, sum_across_memory);
+            machine.set_memory_word(120, 0);
+            let sum_across_memory: u16 =
+                machine.memory.iter().sum();
+            assert_eq!(3, sum_across_memory);
+            machine.set_memory_word(255, 0);
+            let sum_across_memory: u16 =
+                machine.memory.iter().sum();
+            assert_eq!(0, sum_across_memory);
         }
-    }
-
-    mod read_from_extern_load_memory {
-
-        struct MemoryHolder {
-            memory: [u16; 256],
-        }
-        impl MemoryHolder {
-            fn new() -> Self {
-                let memory: [u16; 256] = [0; 256];
-                Self {
-                    memory
-                }
-            }
-            fn set_memory_to_value(&mut self, index: usize, value: u16) {
-                assert!(index < 256);
-                self.memory[index] = value;
-            }
-        }
-
-        struct ExternalSource{
-            input: Vec<u16>,
-        }
-        impl ExternalSource{
-            fn new(input: Vec<u16>) -> Self {
-                Self {
-                    input
-                }
-            }
-            fn get_next_word(&mut self) -> Option<u16> {
-                if self.input.len() == 0 {
-                    return None
-                }
-                let value = self.input.remove(0);
-                Option::from(value)
-            }
-        }
-
         #[test]
-        fn test_load_memory_from_external() {
-            let mut machine = MemoryHolder::new();
-            let mut env = ExternalSource::new(vec![0x1234, 0x2345, 0x3456]);
-            let index = 5;
-            let opt_value = env.get_next_word();
-            match opt_value
-            {
-                Some(value) => {
-                    assert_eq!(0, machine.memory[index]);
-                    machine.set_memory_to_value(index, value);
-                    assert_eq!(0x1234, machine.memory[index]);
-                },
-                None =>{
-                    assert!(false)
-                }
+        fn test_write_mem_word_to_env(){
+            let mut machine = Machine::new();
+            let mut env = ExternalEnv::new(vec![0x0001, 0x0002, 0x0003]);
+            for index in vec![100, 101, 102] {
+                machine.set_memory_word(index, get_word_from_env(&mut env));
+                let word = machine.get_memory_word(index);
+                env.put_word(word);
+                assert_eq!(word, env.peek_at_last_output())
             }
         }
     }
