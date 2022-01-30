@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
-#![allow(unused_must_use)]
-#![allow(unused_mut)]
 
 pub use self::{external_env::*};
 
@@ -26,8 +24,8 @@ pub struct Instruction {
 impl Machine {
     fn new() -> Self {
         let pc: u8 = 0;
-        let mut memory: [u16; 256] = [0; 256];
-        let mut regs: [u16; 16] = [0; 16];
+        let memory: [u16; 256] = [0; 256];
+        let regs: [u16; 16] = [0; 16];
         Self {
             pc,
             regs,
