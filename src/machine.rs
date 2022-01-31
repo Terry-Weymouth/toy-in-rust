@@ -80,9 +80,8 @@ pub mod machine {
 
 #[cfg(test)]
 mod machine_tests {
-    use super::*;
-    use machine::machine::Machine;
-    use machine::external_env::external_env::ExternalEnv;
+    use crate::machine::external_env::external_env::ExternalEnv;
+    use crate::machine::machine::Machine;
 
     mod read_write_memory {
         use super::*;

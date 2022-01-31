@@ -32,7 +32,7 @@ pub mod external_env {
 
 #[cfg(test)]
 mod external_env_tests {
-    use machine::external_env::external_env::ExternalEnv;
+    use crate::machine::external_env::external_env::ExternalEnv;
 
     fn test_read_next_word(env: &mut ExternalEnv, expected: u16) {
         let opt_value = env.get_next_word();
