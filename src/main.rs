@@ -7,21 +7,20 @@
 
 mod machine;
 
-use std::{
-    fs::File,
-    io::{self, BufRead, BufReader},
-    path::Path,
-};
-
-fn lines_from_file(filename: impl AsRef<Path>) -> io::Result<Vec<String>> {
-    BufReader::new(File::open(filename)?).lines().collect()
-}
-
-// ---
+// use machine::machine::{Instruction, Machine};
+// use machine::external_env::external_env::ExternalEnv;
+use machine::program_reader::program_reader::ProgramReader;
 
 fn main() {
-    let lines = lines_from_file("program.txt").expect("Could not load lines");
-    for line in lines {
-        println!("{:?}", line);
+    let filename: &str = "program.txt";
+    let mut reader = ProgramReader::new();
+    reader.load_from_file(filename);
+    let instructions = reader.parse();
+    for i in instructions{
+        println!("{:?}", i)
     }
+    // let machine = Machine::new();
+    // let external = ExternalEnv::new(vec![]);
+    // machine.load(instructions);
+    // machine.run(external);
 }

@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-mod external_env;
-mod program_reader;
+pub mod external_env;
+pub mod program_reader;
 
 pub mod machine {
     #[derive(Debug)]
@@ -23,6 +23,12 @@ pub mod machine {
         t: u8,
         // really u4 - one hex digit
         address: u8,
+    }
+
+    impl Instruction {
+        pub fn new(op: u8, d: u8, s: u8, t: u8, address: u8) -> Self {
+            Self { op, d, s, t, address }
+        }
     }
 
     impl Machine {
