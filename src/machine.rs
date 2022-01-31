@@ -13,21 +13,32 @@ pub mod machine {
     }
 
     #[derive(Debug)]
+    pub struct ProgramLoadWord {
+        address: u8,
+        content: u16,
+    }
+
+    #[derive(Debug)]
     pub struct Instruction {
-        op: u8,
-        // really u4 - one hex digit
-        d: u8,
-        // really u4 - one hex digit
-        s: u8,
-        // really u4 - one hex digit
-        t: u8,
-        // really u4 - one hex digit
+        op: u8,        // really u4 - one hex digit
+        d: u8,         // really u4 - one hex digit
+        s: u8,         // really u4 - one hex digit
+        t: u8,         // really u4 - one hex digit
         address: u8,
     }
 
     impl Instruction {
         pub fn new(op: u8, d: u8, s: u8, t: u8, address: u8) -> Self {
             Self { op, d, s, t, address }
+        }
+    }
+
+    impl ProgramLoadWord {
+        pub fn new(address: u8, content: u16) -> Self {
+            Self {
+                address,
+                content,
+            }
         }
     }
 
@@ -40,6 +51,11 @@ pub mod machine {
                 pc,
                 regs,
                 memory,
+            }
+        }
+        pub fn load(&mut self, loads: Vec<ProgramLoadWord>) {
+            for word in loads{
+                self.memory[word.address as usize] = word.content
             }
         }
         fn set_program_counter(&mut self, pc: u8) {
@@ -80,6 +96,29 @@ pub mod machine {
         pub(crate) fn get_memory_word(&self, index: usize) -> u16 {
             assert!(index < 256);
             self.memory[index]
+        }
+        pub fn dump(&self) {
+            print!("pc: {:2x} regs: 0={:2x}, 1={:2x}, 2={:2x}, 3={:2x}, 4={:2x},",
+                     self.pc, self.regs[0], self.regs[1], self.regs[2],
+                     self.regs[3] ,self.regs[4]
+            );
+            print!(" 5={:2x}, 6={:2x}, 7={:2x}, 8={:2x}, 9={:2x}, A={:2x},",
+                     self.regs[5], self.regs[6], self.regs[7],
+                     self.regs[8], self.regs[9], self.regs[10],
+            );
+            println!(" B={:2x}, C={:2x}, D={:2x}, E={:2x}, F={:2x}",
+                     self.regs[11], self.regs[12], self.regs[13],
+                     self.regs[14], self.regs[15],
+            );
+            println!(" memory...");
+            for i in 0..15 {
+                let start = 16 * i;
+                print! ("  {:02X}:", start);
+                for loc in start..(start + 16){
+                    print!(" {:04X}", self.memory[loc]);
+                }
+                println!()
+            }
         }
     }
 }

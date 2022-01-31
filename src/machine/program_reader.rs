@@ -1,10 +1,9 @@
 pub mod program_reader{
-    use crate::machine::machine::Instruction;
-    use std::{
-        fs::File,
-        io::{BufRead, BufReader},
-        path::Path,
-    };
+    use crate::machine::machine::ProgramLoadWord;
+    use std::fs::File;
+    use std::io::{BufRead, BufReader};
+    use std::path::Path;
+    use regex::Regex;
 
     pub struct ProgramReader {
         lines: Vec<String>,
@@ -30,14 +29,28 @@ pub mod program_reader{
         pub(crate) fn load_from_vec(&mut self, lines: Vec<String>) {
             self.lines = lines;
         }
-        pub fn parse(&self) -> Vec<Instruction> {
-            self.lines.iter().map(|line| self.parse_line(line)).collect()
+        pub fn parse(&self) -> Vec<ProgramLoadWord> {
+            self.lines.iter()
+                .filter_map(|line| self.parse_line(line))
+                .collect()
         }
-        fn parse_line(&self, line: &String) -> Instruction {
-            println!("in parse -- {:?}",line);
-            let dummy =
-                Instruction::new(0,0, 0, 0, 0);
-            dummy
+        fn parse_line(&self, line: &String) -> Option<ProgramLoadWord> {
+            let re = Regex::new(r"^([[:xdigit:]]{2}): *([[:xdigit:]]{4})").unwrap();
+            let flag = re.is_match(line);
+            if !flag {
+                println!("is not instruction -- {:?}",line);
+                None
+            } else {
+                println!("matches -- {:?}",line);
+                let cap = re.captures(line).unwrap();
+                println!("matches -- {:?}",cap);
+                let address_string = cap.get(1).map_or("", |m| m.as_str());
+                let content_string = cap.get(2).map_or("", |m| m.as_str());
+                println!(" -- {:?}->{:?}", address_string, content_string);
+                let address = u8::from_str_radix(address_string, 16).unwrap();
+                let content = u16::from_str_radix(content_string, 16).unwrap();
+                Some(ProgramLoadWord::new(address, content))
+            }
         }
     }
 }
