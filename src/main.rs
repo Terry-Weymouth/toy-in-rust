@@ -3,6 +3,7 @@
 //      setting by "typing" ??
 // see: https://introcs.cs.princeton.edu/java/62toy/
 // see: https://introcs.cs.princeton.edu/java/64simulator/TOY.java.html
+// program examples at: https://introcs.cs.princeton.edu/java/63programming/
 
 mod machine;
 
@@ -19,7 +20,7 @@ fn lines_from_file(filename: impl AsRef<Path>) -> io::Result<Vec<String>> {
 // ---
 
 fn main() {
-    let lines = lines_from_file("/etc/hosts").expect("Could not load lines");
+    let lines = lines_from_file("program.txt").expect("Could not load lines");
     for line in lines {
         println!("{:?}", line);
     }
