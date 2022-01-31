@@ -1,5 +1,5 @@
-[workspace]
-members = [
-    "libs/machine",
-    "libs/wasm-interface"
-]
+[project]
+name = "toy_in_rust"
+version = "0.1.0"
+
+[dependencies]

@@ -4,6 +4,8 @@
 // see: https://introcs.cs.princeton.edu/java/62toy/
 // see: https://introcs.cs.princeton.edu/java/64simulator/TOY.java.html
 
+mod machine;
+
 use std::{
     fs::File,
     io::{self, BufRead, BufReader},

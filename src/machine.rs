@@ -1,82 +1,88 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-pub use self::{external_env::*, program_reader::*};
-
 mod external_env;
 mod program_reader;
 
-#[derive(Debug)]
-pub struct Machine {
-    pc: u8,
-    regs: [u16; 16],
-    memory: [u16; 256],
-}
+pub mod machine {
+    #[derive(Debug)]
+    pub struct Machine {
+        pc: u8,
+        regs: [u16; 16],
+        pub(crate) memory: [u16; 256],
+    }
 
-#[derive(Debug)]
-pub struct Instruction {
-    op:    u8, // really u4 - one hex digit
-    d:     u8, // really u4 - one hex digit
-    s:     u8, // really u4 - one hex digit
-    t:     u8, // really u4 - one hex digit
-    address: u8,
-}
+    #[derive(Debug)]
+    pub struct Instruction {
+        op: u8,
+        // really u4 - one hex digit
+        d: u8,
+        // really u4 - one hex digit
+        s: u8,
+        // really u4 - one hex digit
+        t: u8,
+        // really u4 - one hex digit
+        address: u8,
+    }
 
-impl Machine {
-    fn new() -> Self {
-        let pc: u8 = 0;
-        let memory: [u16; 256] = [0; 256];
-        let regs: [u16; 16] = [0; 16];
-        Self {
-            pc,
-            regs,
-            memory,
+    impl Machine {
+        pub(crate) fn new() -> Self {
+            let pc: u8 = 0;
+            let memory: [u16; 256] = [0; 256];
+            let regs: [u16; 16] = [0; 16];
+            Self {
+                pc,
+                regs,
+                memory,
+            }
         }
-    }
-    fn set_program_counter(&mut self, pc: u8) {
-        self.pc = pc;
-    }
-    fn execute_next_instruction(&self, instruction: &Instruction) -> bool {
-        if instruction.op == 0 {
-            return false;
+        fn set_program_counter(&mut self, pc: u8) {
+            self.pc = pc;
         }
+        fn execute_next_instruction(&self, instruction: &Instruction) -> bool {
+            if instruction.op == 0 {
+                return false;
+            }
 
-        let reg_ref_t_content_read = self.regs[instruction.t as usize];
-        if ((instruction.op == 8) && (instruction.address == 255)) ||
-            (instruction.op == 10 && reg_ref_t_content_read == 255u16) {
-            //&self.read_word_into_memory_255();
+            let reg_ref_t_content_read = self.regs[instruction.t as usize];
+            if ((instruction.op == 8) && (instruction.address == 255)) ||
+                (instruction.op == 10 && reg_ref_t_content_read == 255u16) {
+                //&self.read_word_into_memory_255();
+            }
+
+            self.alu_operation(instruction);
+
+            let reg_ref_t_content_write = self.regs[instruction.t as usize];
+            if (instruction.op == 9 && instruction.address == 255) ||
+                (instruction.op == 11 && reg_ref_t_content_write == 255u16) {
+                //self.write_word_from_memory_255();
+            }
+
+            //&self.regs[0] = &0u16;
+            let trimmed_d_reg_value: u16 = &self.regs[instruction.d as usize] & 0xFFFF;
+            //&self.regs[instruction.d as usize] = &trimmed_d_reg_value;
+
+            true
         }
-
-        self.alu_operation(instruction);
-
-        let reg_ref_t_content_write = self.regs[instruction.t as usize];
-        if (instruction.op == 9 && instruction.address == 255) ||
-            (instruction.op == 11 && reg_ref_t_content_write == 255u16) {
-            //self.write_word_from_memory_255();
+        fn alu_operation(&self, _instruction: &Instruction) {
+            todo!()
         }
-
-        //&self.regs[0] = &0u16;
-        let trimmed_d_reg_value: u16 = &self.regs[instruction.d as usize] & 0xFFFF;
-        //&self.regs[instruction.d as usize] = &trimmed_d_reg_value;
-
-        true
-    }
-    fn alu_operation(&self, _instruction: &Instruction) {
-        todo!()
-    }
-    pub(crate) fn set_memory_word(&mut self, index: usize, value: u16) {
-        assert!(index < 256);
-        self.memory[index] = value;
-    }
-    pub(crate) fn get_memory_word(&self, index: usize) -> u16 {
-        assert!(index < 256);
-        self.memory[index]
+        pub(crate) fn set_memory_word(&mut self, index: usize, value: u16) {
+            assert!(index < 256);
+            self.memory[index] = value;
+        }
+        pub(crate) fn get_memory_word(&self, index: usize) -> u16 {
+            assert!(index < 256);
+            self.memory[index]
+        }
     }
 }
 
 #[cfg(test)]
-mod tests {
+mod machine_tests {
     use super::*;
+    use machine::machine::Machine;
+    use machine::external_env::external_env::ExternalEnv;
 
     mod read_write_memory {
         use super::*;
