@@ -50,11 +50,9 @@ pub mod program_reader {
         }
     }
 
-
     #[cfg(test)]
     mod program_reader_tests {
         use super::*;
-        use crate::machine::machine::ProgramLoadWord;
 
         #[test]
         fn basic_reader_test() {
