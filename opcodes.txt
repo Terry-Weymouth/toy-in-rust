@@ -1,0 +1,20 @@
+OPCODE	DESCRIPTION	FORMAT	PSEUDOCODE
+0	halt	-	exit
+1	add	1	R[d] <- R[s] + R[t]
+2	subtract	1	R[d] <- R[s] - R[t]
+3	and	1	R[d] <- R[s] & R[t]
+4	xor	1	R[d] <- R[s] ^ R[t]
+5	left shift	1	R[d] <- R[s] << R[t]
+6	right shift	1	R[d] <- R[s] >> R[t]
+7	load address	2	R[d] <- addr
+8	load	2	R[d] <- mem[addr]
+9	store	2	mem[addr] <- R[d]
+A	load indirect	1	R[d] <- mem[R[t]]
+B	store indirect	1	mem[R[t]] <- R[d]
+C	branch zero	2	if (R[d] == 0) pc <- addr
+D	branch positive	2	if (R[d] > 0) pc <- addr
+E	jump register	-	pc <- R[d]
+F	jump and link	2	R[d] <- pc; pc <- addr
+
+no format [0, E]
+format 2: [7, 8, 9, C, D, F]

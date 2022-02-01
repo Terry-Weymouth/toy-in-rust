@@ -213,12 +213,11 @@ mod machine_tests {
             }
         }
     }
-    mod load_program{
+    mod loaded_program{
+        use crate::machine::machine::Instruction;
         use super::*;
 
-        #[test]
-        fn program_load()
-        {
+        fn loaded_machine() -> Machine {
             let test_program_strings = vec![
                 "10: 8AFF",   // read R[A]                     a = StdIn.readInt();
                 "11: 8BFF",   // read R[B]                     b = StdIn.readInt();
@@ -240,12 +239,46 @@ mod machine_tests {
             let loads = reader.parse();
             let mut machine = Machine::new();
             machine.load(loads);
+            machine
+        }
+
+        #[test]
+        fn program_load() {
+            let machine = loaded_machine();
 
             let expected = [0x8AFF, 0x8BFF, 0x7C00, 0x7101, 0xCA18,
                 0x1CCB, 0x2AA1, 0xC014, 0x9CFF, 0x0000];
             for i in 0..expected.len() {
                 assert_eq!(machine.get_memory_word(16 + i), expected[i]);
             }
+        }
+
+        #[test]
+        fn instruction_from_memory_word() {
+            let machine = loaded_machine();
+            let word = machine.get_memory_word(16);
+            let op: u8 = (word >> 12) as u8;
+            assert_eq!(8, op);
+            let d = (word >> 8 & 0xF) as u8;
+            assert_eq!(10, d);
+            let format2 = vec![7 as u8, 8, 9, 0xC, 0xD, 0xF];
+            let instruction = {
+                if op == 0 {
+                    Instruction::new(0, 0, 0, 0, 0)
+                } else if op == 0xE {
+                    Instruction::new(op, d, 0, 0, 0)
+                } else {
+                    let s = (word >> 4 & 0xF) as u8;
+                    let t = (word & 0xF) as u8;
+                    let address = (word & 0xFF) as u8;
+                    if format2.contains(op) {
+                        Instruction::new(op, d, s, t, 0)
+                    } else {
+                        Instruction::new(op, d, 0, 0, address)
+                    }
+                }
+            };
+            assert_eq!(instruction.op, op)
         }
     }
 }
