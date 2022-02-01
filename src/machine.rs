@@ -12,6 +12,17 @@ pub mod machine {
         pub(crate) memory: [u16; 256],
     }
 
+    #[derive(FromPrimitive, ToPrimitive)]
+    #[derive(Debug)]
+    #[derive(PartialEq)]
+    #[repr(u8)]
+    pub enum OpCode{
+        Halt, Add, Subtract, And, Xor, LeftShift, RightShift,
+        LoadAddress, Load, Store, LoadIndirect, StoreIndirect,
+        BranchZero, BranchPositive, JumpRegister, JumpAndLink,
+    }
+
+
     #[derive(Debug)]
     pub struct ProgramLoadWord {
         address: u8,
@@ -34,6 +45,9 @@ pub mod machine {
     impl Instruction {
         pub fn new(op: u8, d: u8, s: u8, t: u8, address: u8) -> Self {
             Self { op, d, s, t, address }
+        }
+        pub fn get_values(&self) -> (u8, u8, u8, u8, u8) {
+            (self.op, self.d, self.s, self.t, self.address)
         }
     }
 
@@ -87,33 +101,14 @@ pub mod machine {
                 }
             }
         }
-        fn execute_next_instruction(&self, instruction: &Instruction) -> bool {
-            if instruction.op == 0 {
-                return false;
-            }
-
-            let reg_ref_t_content_read = self.regs[instruction.t as usize];
-            if ((instruction.op == 8) && (instruction.address == 255)) ||
-                (instruction.op == 10 && reg_ref_t_content_read == 255u16) {
-                //&self.read_word_into_memory_255();
-            }
-
-            self.alu_operation(instruction);
-
-            let reg_ref_t_content_write = self.regs[instruction.t as usize];
-            if (instruction.op == 9 && instruction.address == 255) ||
-                (instruction.op == 11 && reg_ref_t_content_write == 255u16) {
-                //self.write_word_from_memory_255();
-            }
-
-            //&self.regs[0] = &0u16;
-            let trimmed_d_reg_value: u16 = &self.regs[instruction.d as usize] & 0xFFFF;
-            //&self.regs[instruction.d as usize] = &trimmed_d_reg_value;
-
+        fn execute_next_instruction(&self, instruction: Instruction) -> bool {
+            let (op, d, s, t, address) =  instruction.get_values();
+            // match op {
+            //    1 => {},
+            //    2 => {},
+            //    3 => {},
+            // };
             true
-        }
-        fn alu_operation(&self, _instruction: &Instruction) {
-            todo!()
         }
         pub(crate) fn set_memory_word(&mut self, index: usize, value: u16) {
             assert!(index < 256);
@@ -355,6 +350,59 @@ pub mod machine {
                 assert_eq!(0xB, instruction.t);
                 assert_eq!(0x00, instruction.address);
             }
+        }
+        mod instruction_execution {
+            use super::*;
+            use num;
+
+            #[test]
+            fn test_from_primitive_to_opcode() {
+                let v: [OpCode; 3]= [
+                    num::FromPrimitive::from_u8(0).unwrap(),
+                    num::FromPrimitive::from_u8(1).unwrap(),
+                    num::FromPrimitive::from_u8(2).unwrap(),
+                ];
+
+                let expected: [OpCode; 3] =  [
+                    OpCode::Halt,
+                    OpCode::Add,
+                    OpCode::Subtract,
+                ];
+
+                for i in 0..3{
+                    assert_eq!(v[i], expected[i]);
+                }
+            }
+
+            #[test]
+            fn test_to_primitive_opcode() {
+                let v: [Option<u8>; 3] = [
+                    num::ToPrimitive::to_u8(&OpCode::Halt),
+                    num::ToPrimitive::to_u8(&OpCode::Add),
+                    num::ToPrimitive::to_u8(&OpCode::Subtract),
+                ];
+
+                assert_eq!(v, [Some(0), Some(1), Some(2)]);
+            }
+
+            #[test]
+            fn basic_instruction() {  // add, subtract, and, xor, left-shift right-shift
+                let mut machine = Machine::new();
+                let d: u8 = 1;
+                let s: u8 = 2;
+                let t: u8 = 3;
+                machine.regs[s as usize] = 0x10;
+                machine.regs[t as usize] = 0x08;
+                let op: u8 = 1; // add: R[d] <- R[s] + R[t]
+                let instruction = Instruction::new(op, d, s, t, 0);
+                machine.execute_next_instruction(instruction);
+                // let op = 2; // subtract: R[d] <- R[s] - R[t]
+                // let op = 3; // and: R[s] & R[t]
+                // let op = 4; // xor: R[d] <- R[s] ^ R[t]
+                // let op = 5; // left shift:	R[d] <- R[s] << R[t]
+                // let op = 6; // right shift: R[d] <- R[s] >> R[t]
+            }
+
         }
     }
 }

@@ -10,6 +10,9 @@ mod machine;
 use machine::machine::Machine;
 //use machine::external_env::external_env::ExternalEnv;
 use machine::program_reader::program_reader::ProgramReader;
+#[macro_use]
+extern crate num_derive;
+
 
 fn main() {
     let filename: &str = "program.txt";
