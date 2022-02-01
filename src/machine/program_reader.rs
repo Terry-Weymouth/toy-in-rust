@@ -1,4 +1,4 @@
-pub mod program_reader{
+pub mod program_reader {
     use crate::machine::machine::ProgramLoadWord;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -10,7 +10,7 @@ pub mod program_reader{
     }
 
     impl ProgramReader {
-        pub fn new() -> Self{
+        pub fn new() -> Self {
             let lines: Vec<String> = vec![];
             Self {
                 lines,
@@ -49,14 +49,27 @@ pub mod program_reader{
             }
         }
     }
-}
 
 
+    #[cfg(test)]
+    mod program_reader_tests {
+        use super::*;
+        use crate::machine::machine::ProgramLoadWord;
 
-#[cfg(test)]
-mod program_reader_tests {
-    #[test]
-    fn it_works(){
-        assert_eq!(2, 1+1);
+        #[test]
+        fn basic_reader_test() {
+            let test_program_strings = vec![
+                "10: 8AFF",   // read to R[A]                  a = StdIn.readInt();
+                "11: 8BFF",   // read to R[B]                  b = StdIn.readInt();
+            ];
+            let mut program_text: Vec<String> = vec![];
+            for s in test_program_strings {
+                program_text.push(String::from(s));
+            }
+            let mut reader = ProgramReader::new();
+            reader.load_from_vec(program_text);
+            let loads = reader.parse();
+            assert_eq!(2, loads.len());
+        }
     }
 }
