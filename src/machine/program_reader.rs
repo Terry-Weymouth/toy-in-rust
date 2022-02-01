@@ -38,15 +38,11 @@ pub mod program_reader{
             let re = Regex::new(r"^([[:xdigit:]]{2}): *([[:xdigit:]]{4})").unwrap();
             let flag = re.is_match(line);
             if !flag {
-                println!("is not instruction -- {:?}",line);
                 None
             } else {
-                println!("matches -- {:?}",line);
                 let cap = re.captures(line).unwrap();
-                println!("matches -- {:?}",cap);
                 let address_string = cap.get(1).map_or("", |m| m.as_str());
                 let content_string = cap.get(2).map_or("", |m| m.as_str());
-                println!(" -- {:?}->{:?}", address_string, content_string);
                 let address = u8::from_str_radix(address_string, 16).unwrap();
                 let content = u16::from_str_radix(content_string, 16).unwrap();
                 Some(ProgramLoadWord::new(address, content))

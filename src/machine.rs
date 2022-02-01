@@ -127,6 +127,7 @@ pub mod machine {
 mod machine_tests {
     use crate::machine::external_env::external_env::ExternalEnv;
     use crate::machine::machine::Machine;
+    use crate::machine::program_reader::program_reader::ProgramReader;
 
     mod read_write_memory {
         use super::*;
@@ -209,6 +210,41 @@ mod machine_tests {
                 let word = machine.get_memory_word(index);
                 env.put_word(word);
                 assert_eq!(word, env.peek_at_last_output())
+            }
+        }
+    }
+    mod load_program{
+        use super::*;
+
+        #[test]
+        fn program_load()
+        {
+            let test_program_strings = vec![
+                "10: 8AFF",   // read R[A]                     a = StdIn.readInt();
+                "11: 8BFF",   // read R[B]                     b = StdIn.readInt();
+                "12: 7C00",   // R[C] <- 0000                  c = 0;
+                "13: 7101",   // R[1] <- 0001                  the constant 1
+                "14: CA18",   // if (R[A] == 0) goto 18        while (a != 0) {
+                "15: 1CCB",   // R[C] <- R[C] + R[B]              c += b;
+                "16: 2AA1",   // R[A] <- R[A] - R[1]              a -= 1;
+                "17: C014",   // goto 14                       }
+                "18: 9CFF",   //write R[C]                    StdOut.println(c);
+                "19: 0000"    // halt
+            ];
+            let mut reader = ProgramReader::new();
+            let mut program_text: Vec<String> = vec![];
+            for s in test_program_strings {
+                program_text.push(String::from(s));
+            }
+            reader.load_from_vec(program_text);
+            let loads = reader.parse();
+            let mut machine = Machine::new();
+            machine.load(loads);
+
+            let expected = [0x8AFF, 0x8BFF, 0x7C00, 0x7101, 0xCA18,
+                0x1CCB, 0x2AA1, 0xC014, 0x9CFF, 0x0000];
+            for i in 0..expected.len() {
+                assert_eq!(machine.get_memory_word(16 + i), expected[i]);
             }
         }
     }
