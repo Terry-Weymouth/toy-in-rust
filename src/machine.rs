@@ -50,6 +50,22 @@ pub mod machine {
         pub fn get_values(&self) -> (&OpCode, u8, u8, u8, u8) {
             (&self.op, self.d, self.s, self.t, self.address)
         }
+        pub fn is_read_to_memory(&self, regs: &[u16; 16]) -> bool{
+            // op code is Load and address == 255
+            // or op code is LoadDirect and R[t] == 255
+            match self.op {
+                OpCode::Load => {self.address == 0xFF}
+                OpCode::LoadIndirect => {regs[self.t as usize] == 0xFF}
+                _ => false
+            }
+        }
+        pub fn is_write_from_memory(&self, regs: &[u16; 16]) -> bool{
+            match self.op {
+                OpCode::Store => {self.address == 0xFF}
+                OpCode::StoreIndirect => {regs[self.t as usize] == 0xFF}
+                _ => false
+            }
+        }
     }
 
     impl ProgramLoadWord {
@@ -102,7 +118,7 @@ pub mod machine {
                 }
             }
         }
-        fn execute_next_instruction(&mut self, instruction: Instruction) -> bool {
+        fn execute_next_instruction(&mut self, instruction: &Instruction) -> bool {
             let (op, d, s, t, address) =  instruction.get_values();
             let d = d as usize;
             let s = s as usize;
@@ -127,13 +143,21 @@ pub mod machine {
                 OpCode::ShiftRight => {self.regs[d] = self.regs[s] >> self.regs[t]},
                 // 7	load address	2	R[d] <- addr
                 OpCode::LoadAddress => {self.regs[d] = address as u16},
-                // 8	load	2	R[d] <- mem[addr]; Note: addr == 255 is special case todo!()
+                // 8	load	2	R[d] <- mem[addr]
+                // Note: addr == 255 is special case to load sysin into mem[255]
+                //   before execution this instruction; handled in execution loop
                 OpCode::Load => {self.regs[d] = self.memory[address as usize]},
-                // 9	store	2	mem[addr] <- R[d]; Note: addr == 255 is special case todo!()
+                // 9	store	2	mem[addr] <- R[d]
+                // Note: addr == 255 is special case to write sysout from mem[255]
+                //   after execution this instruction; handled in execution loop
                 OpCode::Store => {self.memory[address as usize] = self.regs[d]},
-                // A	load indirect	1	R[d] <- mem[R[t]]; Note: R[t] == 255 is special case todo!()
+                // A	load indirect	1	R[d] <- mem[R[t]]
+                // Note: R[t] == 255 is special case to load sysin into mem[255]
+                //   before execution this instruction; handled in execution loop
                 OpCode::LoadIndirect => {self.regs[d] = self.memory[self.regs[t] as usize]},
-                // B	store indirect	1	mem[R[t]] <- R[d]; Note: R[T] == 255 is special case todo!()
+                // B	store indirect	1	mem[R[t]] <- R[d]
+                // Note: R[T] == 255 is special case to write sysout from mem[255]
+                //   after execution this instruction; handled in execution loop
                 OpCode::StoreIndirect => {self.memory[self.regs[t] as usize] = self.regs[d] },
                 // C	branch zero	2	if (R[d] == 0) pc <- addr
                 OpCode::BranchZero => {if self.regs[d] == 0 {self.pc = address}},
@@ -223,7 +247,6 @@ pub mod machine {
                 assert_eq!(0, sum_across_memory);
             }
 
-            // test index out of bounds for size of memory todo!()
             #[test]
             fn read_word_from_env_load_to_memory() {
                 let mut machine = Machine::new();
@@ -400,19 +423,19 @@ pub mod machine {
 
             #[test]
             fn test_from_primitive_to_opcode() {
-                let v: [OpCode; 3]= [
+                let v: [OpCode; 3] = [
                     num::FromPrimitive::from_u8(0).unwrap(),
                     num::FromPrimitive::from_u8(1).unwrap(),
                     num::FromPrimitive::from_u8(2).unwrap(),
                 ];
 
-                let expected: [OpCode; 3] =  [
+                let expected: [OpCode; 3] = [
                     OpCode::Halt,
                     OpCode::Add,
                     OpCode::Subtract,
                 ];
 
-                for i in 0..3{
+                for i in 0..3 {
                     assert_eq!(v[i], expected[i]);
                 }
             }
@@ -441,42 +464,42 @@ pub mod machine {
 
                 let op: u8 = 1; // add: R[d] <- R[s] + R[t]
                 let instruction = Instruction::new(op, d, s, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 33u16);
 
                 let op = 2; // subtract: R[d] <- R[s] - R[t]
                 let instruction = Instruction::new(op, d, s, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 17u16);
 
                 let op = 2; // subtract: R[d] <- R[s] - R[t]
                 let instruction = Instruction::new(op, d, s, t_sub, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize] as i16, -7i16);
 
                 let op = 3; // and: R[s] & R[t]
                 let instruction = Instruction::new(op, d, s, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 8u16);
 
                 let op = 4; // xor: R[d] <- R[s] ^ R[t]
                 let instruction = Instruction::new(op, d, s, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 17u16);
 
                 let op = 5; // left shift:	R[d] <- R[s] << R[t]
                 let instruction = Instruction::new(op, d, s, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 6400u16);
 
                 let op = 6; // right shift: R[d] <- R[s] >> R[t]
                 let instruction = Instruction::new(op, d, s, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 0u16);
             }
 
             #[test]
-            fn load_and_store_instructions(){
+            fn load_and_store_instructions() {
                 let mut machine = Machine::new();
                 let d: u8 = 1;
                 let t: u8 = 3;
@@ -485,13 +508,13 @@ pub mod machine {
                 let addr = 0x30;
                 let instruction = Instruction::new(op, d, 0, 0, addr);
                 assert_eq!(machine.regs[d as usize], 0 as u16);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 0x30 as u16);
 
                 let op = 8; // load	2	R[d] <- mem[addr]
                 machine.memory[addr as usize] = 0x1234 as u16;
                 let instruction = Instruction::new(op, d, 0, 0, addr);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 0x1234 as u16);
 
                 let op = 9; // store	2	mem[addr] <- R[d]
@@ -499,30 +522,30 @@ pub mod machine {
                 assert_eq!(machine.memory[addr as usize], 0x0 as u16);
                 assert_eq!(machine.regs[d as usize], 0x1234 as u16);
                 let instruction = Instruction::new(op, d, 0, 0, addr);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.memory[addr as usize], 0x1234 as u16);
 
                 let op = 0xA; // load indirect	1	R[d] <- mem[R[t]]
                 machine.regs[t as usize] = 0x50;
                 assert_eq!(machine.memory[machine.regs[t as usize] as usize], 0x0 as u16);
                 machine.memory[machine.regs[t as usize] as usize] = 0x1212;
-                machine.regs[d as usize]  = 0x0;
+                machine.regs[d as usize] = 0x0;
                 assert_eq!(machine.regs[d as usize], 0x0 as u16);
                 let instruction = Instruction::new(op, d, 0, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 0x1212 as u16);
 
                 let op = 0xB; // store indirect	1	mem[R[t]] <- R[d]
-                machine.regs[d as usize]  = 0x2121;
+                machine.regs[d as usize] = 0x2121;
                 machine.regs[t as usize] = 0x60;
                 assert_eq!(machine.memory[machine.regs[t as usize] as usize], 0x0 as u16);
                 let instruction = Instruction::new(op, d, 0, t, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.memory[machine.regs[t as usize] as usize], 0x2121 as u16);
             }
 
             #[test]
-            fn control_flow_instructions(){
+            fn control_flow_instructions() {
                 let mut machine = Machine::new();
                 let d: u8 = 1;
 
@@ -532,11 +555,11 @@ pub mod machine {
                 assert_eq!(machine.pc, 0x10);
                 machine.regs[d as usize] = 0x1;
                 let instruction = Instruction::new(op, d, 0, 0, addr);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.pc, 0x10);
                 machine.regs[d as usize] = 0x0;
                 let instruction = Instruction::new(op, d, 0, 0, addr);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.pc, 0x30);
 
                 let op = 0xD; // branch positive	2	if (R[d] > 0) pc <- addr
@@ -545,11 +568,11 @@ pub mod machine {
                 assert_eq!(machine.pc, 0x10);
                 machine.regs[d as usize] = 0x0;
                 let instruction = Instruction::new(op, d, 0, 0, addr);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.pc, 0x10);
                 machine.regs[d as usize] = 0x1;
                 let instruction = Instruction::new(op, d, 0, 0, addr);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.pc, 0x30);
 
                 let op = 0xE; // jump register	-	pc <- R[d]
@@ -557,7 +580,7 @@ pub mod machine {
                 assert_eq!(machine.pc, 0x10);
                 machine.regs[d as usize] = 0x30;
                 let instruction = Instruction::new(op, d, 0, 0, 0);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.pc, 0x30);
 
                 let op = 0xF; // jump and link	2	R[d] <- pc; pc <- addr
@@ -566,16 +589,113 @@ pub mod machine {
                 assert_eq!(machine.pc, 0x10);
                 machine.regs[d as usize] = 0x30;
                 let instruction = Instruction::new(op, d, 0, 0, addr);
-                assert!(machine.execute_next_instruction(instruction));
+                assert!(machine.execute_next_instruction(&instruction));
                 assert_eq!(machine.regs[d as usize], 0x10);
                 assert_eq!(machine.pc, 0x30);
 
                 let op = 0x0; // halt	-	exit
                 let instruction = Instruction::new(op, 0, 0, 0, 0);
-                assert!(!machine.execute_next_instruction(instruction));
+                assert!(!machine.execute_next_instruction(&instruction));
             }
-            fn std_read_write() {
+        }
+        mod interface_with_external_read_write{
+            use super::*;
+            use crate::machine::external_env::external_env::ExternalEnv;
 
+            #[test]
+            fn std_read_just_words() {
+                let mut env = ExternalEnv::new(vec![0x1234, 0x2345, 0x3456]);
+                assert_eq!(env.get_next_word().unwrap(), 0x1234);
+                assert_eq!(env.get_next_word().unwrap(), 0x2345);
+                assert_eq!(env.get_next_word().unwrap(), 0x3456);
+                assert!(env.get_next_word().is_none());
+            }
+            #[test]
+            fn std_read_to_memory_by_instruction_direct() {
+                // 8	load	2	R[d] <- mem[addr]; Note: addr == 255 is special case
+                let mut env = ExternalEnv::new(vec![0x1234, 0x2345, 0x3456]);
+                let mut machine = Machine::new();
+                machine.set_program_counter(0x10);
+                let op = 8;
+                let d = 1;
+                let addr = 0xFF;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                if instruction.is_read_to_memory(&machine.regs) {
+                    let read_try = env.get_next_word();
+                    assert!(!read_try.is_none());
+                    let word = read_try.unwrap();
+                    assert_eq!(word, 0x1234);
+                    machine.memory[instruction.address as usize] = word
+                }
+                assert!(machine.execute_next_instruction(&instruction));
+                assert_eq!(machine.memory[0xFF as usize], 0x1234);
+                assert_eq!(machine.regs[d as usize], 0x1234);
+            }
+            #[test]
+            fn std_read_to_memory_by_instruction_indirect() {
+                // A	load indirect	1	R[d] <- mem[R[t]]; Note: R[t] == 255 is special case
+                let mut env = ExternalEnv::new(vec![0x1234, 0x2345, 0x3456]);
+                let mut machine = Machine::new();
+                machine.set_program_counter(0x10);
+                let op = 0xA;
+                let d = 1;
+                let t = 2;
+                let addr = 0xFF;
+                machine.regs[t as usize] = addr;
+                let instruction = Instruction::new(op, d, 0, t, 0);
+                if instruction.is_read_to_memory(&machine.regs) {
+                    let read_try = env.get_next_word();
+                    assert!(!read_try.is_none());
+                    let word = read_try.unwrap();
+                    assert_eq!(word, 0x1234);
+                    machine.memory[machine.regs[t as usize] as usize] = word;
+                }
+                assert!(machine.execute_next_instruction(&instruction));
+                assert_eq!(machine.regs[t as usize], 0xFF);
+                assert_eq!(machine.memory[0xFF as usize], 0x1234);
+                assert_eq!(machine.regs[d as usize], 0x1234);
+            }
+            #[test]
+            fn std_write_from_memory_by_instruction() {
+                // 9	store	2	mem[addr] <- R[d]; Note: addr == 255 is special case
+                let mut env = ExternalEnv::new(vec![]);
+                let mut machine = Machine::new();
+                machine.set_program_counter(0x10);
+                let op = 0x9;
+                let d = 1;
+                let addr = 0xFF;
+                let word_to_write = 0x9876;
+                machine.regs[d as usize] = word_to_write;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(&instruction));
+                if instruction.is_write_from_memory(&machine.regs) {
+                    env.put_word(machine.memory[0xFF as usize]);
+                    assert_eq!(env.peek_at_last_output(), word_to_write);
+                }
+                assert_eq!(machine.regs[d as usize], word_to_write);
+                assert_eq!(machine.memory[0xFF as usize], word_to_write);
+            }
+            #[test]
+            fn std_write_from_memory_by_instruction_indirect() {
+                // B	store indirect	1	mem[R[t]] <- R[d]; Note: R[T] == 255 is special case
+                let mut env = ExternalEnv::new(vec![]);
+                let mut machine = Machine::new();
+                machine.set_program_counter(0x10);
+                let op = 0xB;
+                let d = 1;
+                let t = 2;
+                let addr = 0xFF;
+                machine.regs[t as usize] = addr;
+                let word_to_write = 0x9876;
+                machine.regs[d as usize] = word_to_write;
+                let instruction = Instruction::new(op, d, 0, t, 0);
+                assert!(machine.execute_next_instruction(&instruction));
+                if instruction.is_write_from_memory(&machine.regs) {
+                    env.put_word(machine.memory[0xFF as usize]);
+                    assert_eq!(env.peek_at_last_output(), word_to_write);
+                }
+                assert_eq!(machine.regs[d as usize], word_to_write);
+                assert_eq!(machine.memory[0xFF as usize], word_to_write);
             }
         }
     }
