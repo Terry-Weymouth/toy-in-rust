@@ -17,7 +17,7 @@ pub mod machine {
     #[derive(PartialEq)]
     #[repr(u8)]
     pub enum OpCode{
-        Halt, Add, Subtract, And, Xor, LeftShift, RightShift,
+        Halt, Add, Subtract, And, Xor, ShiftLeft, ShiftRight,
         LoadAddress, Load, Store, LoadIndirect, StoreIndirect,
         BranchZero, BranchPositive, JumpRegister, JumpAndLink,
     }
@@ -31,7 +31,7 @@ pub mod machine {
 
     #[derive(Debug)]
     pub struct Instruction {
-        op: u8,
+        op: OpCode,
         // really u4 - one hex digit
         d: u8,
         // really u4 - one hex digit
@@ -43,11 +43,12 @@ pub mod machine {
     }
 
     impl Instruction {
-        pub fn new(op: u8, d: u8, s: u8, t: u8, address: u8) -> Self {
+        pub fn new(op_code_num: u8, d: u8, s: u8, t: u8, address: u8) -> Self {
+            let op: OpCode = num::FromPrimitive::from_u8(op_code_num).unwrap();
             Self { op, d, s, t, address }
         }
-        pub fn get_values(&self) -> (u8, u8, u8, u8, u8) {
-            (self.op, self.d, self.s, self.t, self.address)
+        pub fn get_values(&self) -> (&OpCode, u8, u8, u8, u8) {
+            (&self.op, self.d, self.s, self.t, self.address)
         }
     }
 
@@ -101,13 +102,48 @@ pub mod machine {
                 }
             }
         }
-        fn execute_next_instruction(&self, instruction: Instruction) -> bool {
+        fn execute_next_instruction(&mut self, instruction: Instruction) -> bool {
             let (op, d, s, t, address) =  instruction.get_values();
-            // match op {
-            //    1 => {},
-            //    2 => {},
-            //    3 => {},
-            // };
+            let d = d as usize;
+            let s = s as usize;
+            let t = t as usize;
+            match op {
+                // 0	halt	-	exit
+                OpCode::Halt => { return false; }
+                // 1	add	1	R[d] <- R[s] + R[t]
+                OpCode::Add => {self.regs[d] = self.regs[s] + self.regs[t]},
+                // 2	subtract	1	R[d] <- R[s] - R[t]
+                OpCode::Subtract => {
+                    self.regs[d] =
+                        {let a: i16 = self.regs[s] as i16 - self.regs[t] as i16; a} as u16
+                },
+                // 3	and	1	R[d] <- R[s] & R[t]
+                OpCode::And => {self.regs[d] = self.regs[s] & self.regs[t]},
+                // 4	xor	1	R[d] <- R[s] ^ R[t]
+                OpCode::Xor => {self.regs[d] = self.regs[s] ^ self.regs[t]},
+                // 5	left shift	1	R[d] <- R[s] << R[t]
+                OpCode::ShiftLeft => {self.regs[d] = self.regs[s] << self.regs[t]},
+                // 6	right shift	1	R[d] <- R[s] >> R[t]
+                OpCode::ShiftRight => {self.regs[d] = self.regs[s] >> self.regs[t]},
+                // 7	load address	2	R[d] <- addr
+                OpCode::LoadAddress => {self.regs[d] = address as u16},
+                // 8	load	2	R[d] <- mem[addr]; Note: addr == 255 is special case todo!()
+                OpCode::Load => {self.regs[d] = self.memory[address as usize]},
+                // 9	store	2	mem[addr] <- R[d]; Note: addr == 255 is special case todo!()
+                OpCode::Store => {self.memory[address as usize] = self.regs[d]},
+                // A	load indirect	1	R[d] <- mem[R[t]]; Note: R[t] == 255 is special case todo!()
+                OpCode::LoadIndirect => {self.regs[d] = self.memory[self.regs[t] as usize]},
+                // B	store indirect	1	mem[R[t]] <- R[d]; Note: R[T] == 255 is special case todo!()
+                OpCode::StoreIndirect => {self.memory[self.regs[t] as usize] = self.regs[d] },
+                // C	branch zero	2	if (R[d] == 0) pc <- addr
+                OpCode::BranchZero => {if self.regs[d] == 0 {self.pc = address}},
+                // D	branch positive	2	if (R[d] > 0) pc <- addr
+                OpCode::BranchPositive => {if self.regs[d] > 0 {self.pc = address}},
+                // E	jump register	-	pc <- R[d]
+                OpCode::JumpRegister => {self.pc = (self.regs[d] & 0xFF) as u8},
+                // F	jump and link	2	R[d] <- pc; pc <- addr
+                OpCode::JumpAndLink => {self.regs[d] = self.pc as u16; self.pc = address },
+            };
             true
         }
         pub(crate) fn set_memory_word(&mut self, index: usize, value: u16) {
@@ -305,7 +341,8 @@ pub mod machine {
                     }
                 };
                 assert!(format2.contains(&op));
-                assert_eq!(op, instruction.op);
+                let op_code: OpCode = num::FromPrimitive::from_u8(op).unwrap();
+                assert_eq!(op_code, instruction.op);
                 assert_eq!(d, instruction.d);
                 assert_eq!(0, instruction.s);
                 assert_eq!(0, instruction.t);
@@ -319,32 +356,38 @@ pub mod machine {
                 assert_eq!(machine.pc, 0x10);
                 let instruction = machine.get_next_instruction();
                 assert_eq!(machine.pc, 0x11);
-                assert_eq!(0x8, instruction.op);
+                let opcode: OpCode = num::FromPrimitive::from_u8(0x8).unwrap();
+                assert_eq!(opcode, instruction.op);
                 assert_eq!(0xA, instruction.d);
                 assert_eq!(0xFF, instruction.address);
                 let instruction = machine.get_next_instruction();
                 assert_eq!(machine.pc, 0x12);
-                assert_eq!(0x8, instruction.op);
+                let opcode: OpCode = num::FromPrimitive::from_u8(0x8).unwrap();
+                assert_eq!(opcode, instruction.op);
                 assert_eq!(0xB, instruction.d);
                 assert_eq!(0xFF, instruction.address);
                 let instruction = machine.get_next_instruction();
                 assert_eq!(machine.pc, 0x13);
-                assert_eq!(0x7, instruction.op);
+                let opcode: OpCode = num::FromPrimitive::from_u8(0x7).unwrap();
+                assert_eq!(opcode, instruction.op);
                 assert_eq!(0xC, instruction.d);
                 assert_eq!(0x00, instruction.address);
                 let instruction = machine.get_next_instruction();
                 assert_eq!(machine.pc, 0x14);
-                assert_eq!(0x7, instruction.op);
+                let opcode: OpCode = num::FromPrimitive::from_u8(0x7).unwrap();
+                assert_eq!(opcode, instruction.op);
                 assert_eq!(0x1, instruction.d);
                 assert_eq!(0x01, instruction.address);
                 let instruction = machine.get_next_instruction();
                 assert_eq!(machine.pc, 0x15);
-                assert_eq!(0xC, instruction.op);
+                let opcode: OpCode = num::FromPrimitive::from_u8(0xC).unwrap();
+                assert_eq!(opcode, instruction.op);
                 assert_eq!(0xA, instruction.d);
                 assert_eq!(0x18, instruction.address);
                 let instruction = machine.get_next_instruction();
                 assert_eq!(machine.pc, 0x16);
-                assert_eq!(0x1, instruction.op);
+                let opcode: OpCode = num::FromPrimitive::from_u8(0x1).unwrap();
+                assert_eq!(opcode, instruction.op);
                 assert_eq!(0xC, instruction.d);
                 assert_eq!(0xC, instruction.s);
                 assert_eq!(0xB, instruction.t);
@@ -391,18 +434,149 @@ pub mod machine {
                 let d: u8 = 1;
                 let s: u8 = 2;
                 let t: u8 = 3;
-                machine.regs[s as usize] = 0x10;
+                let t_sub: u8 = 4;
+                machine.regs[s as usize] = 0x19;
                 machine.regs[t as usize] = 0x08;
+                machine.regs[t_sub as usize] = 0x20;
+
                 let op: u8 = 1; // add: R[d] <- R[s] + R[t]
                 let instruction = Instruction::new(op, d, s, t, 0);
-                machine.execute_next_instruction(instruction);
-                // let op = 2; // subtract: R[d] <- R[s] - R[t]
-                // let op = 3; // and: R[s] & R[t]
-                // let op = 4; // xor: R[d] <- R[s] ^ R[t]
-                // let op = 5; // left shift:	R[d] <- R[s] << R[t]
-                // let op = 6; // right shift: R[d] <- R[s] >> R[t]
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 33u16);
+
+                let op = 2; // subtract: R[d] <- R[s] - R[t]
+                let instruction = Instruction::new(op, d, s, t, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 17u16);
+
+                let op = 2; // subtract: R[d] <- R[s] - R[t]
+                let instruction = Instruction::new(op, d, s, t_sub, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize] as i16, -7i16);
+
+                let op = 3; // and: R[s] & R[t]
+                let instruction = Instruction::new(op, d, s, t, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 8u16);
+
+                let op = 4; // xor: R[d] <- R[s] ^ R[t]
+                let instruction = Instruction::new(op, d, s, t, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 17u16);
+
+                let op = 5; // left shift:	R[d] <- R[s] << R[t]
+                let instruction = Instruction::new(op, d, s, t, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 6400u16);
+
+                let op = 6; // right shift: R[d] <- R[s] >> R[t]
+                let instruction = Instruction::new(op, d, s, t, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 0u16);
             }
 
+            #[test]
+            fn load_and_store_instructions(){
+                let mut machine = Machine::new();
+                let d: u8 = 1;
+                let t: u8 = 3;
+
+                let op = 7; // load address	2	R[d] <- addr
+                let addr = 0x30;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert_eq!(machine.regs[d as usize], 0 as u16);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 0x30 as u16);
+
+                let op = 8; // load	2	R[d] <- mem[addr]
+                machine.memory[addr as usize] = 0x1234 as u16;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 0x1234 as u16);
+
+                let op = 9; // store	2	mem[addr] <- R[d]
+                let addr = 0x40;
+                assert_eq!(machine.memory[addr as usize], 0x0 as u16);
+                assert_eq!(machine.regs[d as usize], 0x1234 as u16);
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.memory[addr as usize], 0x1234 as u16);
+
+                let op = 0xA; // load indirect	1	R[d] <- mem[R[t]]
+                machine.regs[t as usize] = 0x50;
+                assert_eq!(machine.memory[machine.regs[t as usize] as usize], 0x0 as u16);
+                machine.memory[machine.regs[t as usize] as usize] = 0x1212;
+                machine.regs[d as usize]  = 0x0;
+                assert_eq!(machine.regs[d as usize], 0x0 as u16);
+                let instruction = Instruction::new(op, d, 0, t, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 0x1212 as u16);
+
+                let op = 0xB; // store indirect	1	mem[R[t]] <- R[d]
+                machine.regs[d as usize]  = 0x2121;
+                machine.regs[t as usize] = 0x60;
+                assert_eq!(machine.memory[machine.regs[t as usize] as usize], 0x0 as u16);
+                let instruction = Instruction::new(op, d, 0, t, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.memory[machine.regs[t as usize] as usize], 0x2121 as u16);
+            }
+
+            #[test]
+            fn control_flow_instructions(){
+                let mut machine = Machine::new();
+                let d: u8 = 1;
+
+                let op = 0xC; // branch zero	2	if (R[d] == 0) pc <- addr
+                let addr = 0x30;
+                machine.set_program_counter(0x10);
+                assert_eq!(machine.pc, 0x10);
+                machine.regs[d as usize] = 0x1;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.pc, 0x10);
+                machine.regs[d as usize] = 0x0;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.pc, 0x30);
+
+                let op = 0xD; // branch positive	2	if (R[d] > 0) pc <- addr
+                let addr = 0x30;
+                machine.set_program_counter(0x10);
+                assert_eq!(machine.pc, 0x10);
+                machine.regs[d as usize] = 0x0;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.pc, 0x10);
+                machine.regs[d as usize] = 0x1;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.pc, 0x30);
+
+                let op = 0xE; // jump register	-	pc <- R[d]
+                machine.set_program_counter(0x10);
+                assert_eq!(machine.pc, 0x10);
+                machine.regs[d as usize] = 0x30;
+                let instruction = Instruction::new(op, d, 0, 0, 0);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.pc, 0x30);
+
+                let op = 0xF; // jump and link	2	R[d] <- pc; pc <- addr
+                let addr = 0x30;
+                machine.set_program_counter(0x10);
+                assert_eq!(machine.pc, 0x10);
+                machine.regs[d as usize] = 0x30;
+                let instruction = Instruction::new(op, d, 0, 0, addr);
+                assert!(machine.execute_next_instruction(instruction));
+                assert_eq!(machine.regs[d as usize], 0x10);
+                assert_eq!(machine.pc, 0x30);
+
+                let op = 0x0; // halt	-	exit
+                let instruction = Instruction::new(op, 0, 0, 0, 0);
+                assert!(!machine.execute_next_instruction(instruction));
+            }
+            fn std_read_write() {
+
+            }
         }
     }
 }
