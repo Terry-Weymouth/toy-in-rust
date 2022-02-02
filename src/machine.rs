@@ -5,6 +5,8 @@ pub mod external_env;
 pub mod program_reader;
 
 pub mod machine {
+    use super::external_env::external_env::ExternalEnv;
+
     #[derive(Debug)]
     pub struct Machine {
         pc: u8,
@@ -199,6 +201,25 @@ pub mod machine {
                     print!(" {:04X}", self.memory[loc]);
                 }
                 println!()
+            }
+        }
+        pub fn run(&mut self, env: &mut ExternalEnv) {
+            self.set_program_counter(0x10);
+            let mut running = true;
+            while running{
+                let instruction = &self.get_next_instruction();
+                if instruction.is_read_to_memory(&self.regs) {
+                    let option = env.get_next_word();
+                    let word = option.unwrap();
+                    self.set_memory_word(0xFF as usize, word);
+                }
+                running = self.execute_next_instruction(instruction);
+                if running {
+                    if instruction.is_write_from_memory(&self.regs) {
+                        let word = self.get_memory_word(0xFF as usize);
+                        env.put_word(word);
+                    }
+                }
             }
         }
     }
