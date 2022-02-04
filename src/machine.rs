@@ -68,28 +68,68 @@ pub mod machine {
                 _ => false
             }
         }
-        pub fn dump_with_regs(&self, regs: &[u16; 16]) {
+        pub fn format_for_pp(&self, regs: &[u16; 16], memory: &[u16; 256]) -> String {
             let (op, d, s, t, addr) = self.get_values();
             let dc = regs[d as usize];
             let sc = regs[s as usize];
             let tc = regs[t as usize];
             match self.op {
-                OpCode::Add => { println!("Op: {:?}, d:R[{:01x}]={}({:04x})", op, d, dc, dc)},
-                OpCode::Subtract => { println!("Op: {:?}", op )},
-                OpCode::And => { println!("Op: {:?}", op )},
-                OpCode::Xor => { println!("Op: {:?}", op )},
-                OpCode::ShiftLeft => { println!("Op: {:?}", op )},
-                OpCode::ShiftRight => { println!("Op: {:?}", op )},
-                OpCode::LoadAddress => { println!("Op: {:?}", op )},
-                OpCode::Load => { println!("Op: {:?}", op )},
-                OpCode::Store => { println!("Op: {:?}", op )},
-                OpCode::LoadIndirect => { println!("Op: {:?}", op )},
-                OpCode::StoreIndirect => { println!("Op: {:?}", op )},
-                OpCode::BranchZero => { println!("Op: {:?}", op )},
-                OpCode::BranchPositive => { println!("Op: {:?}", op )},
-                OpCode::JumpRegister => { println!("Op: {:?}", op )},
-                OpCode::JumpAndLink => { println!("Op: {:?}", op )},
-                OpCode::Halt => { println!("Op: {:?}", op )},
+                // R[d] <- R[s] <op> R[t]
+                OpCode::Add | OpCode::Subtract | OpCode::And | OpCode::Xor |
+                OpCode::ShiftLeft | OpCode::ShiftRight
+                => {
+                    format!(
+                        "Op: {:?} - d:R[{:01X}] set from: s:R[{:01X}]={}({:04X}) <op> t:R[{:01X}]={}({:04X})",
+                        op, d, s, sc, sc, t, tc, tc)
+                },
+                // R[d] <- addr
+                OpCode::LoadAddress => {
+                    format!(
+                        "Op: {:?} - d:R[{:01X}] becomes {:04X}",
+                        op, d, addr )
+                },
+                // R[d] <- mem[addr]
+                OpCode::Load => {
+                    format!(
+                        "Op: {:?} - d:R[{:01X}] set from mem[{:02X}]={}({:04X})",
+                        op, d, addr, memory[addr as usize], memory[addr as usize] )
+                },
+                // mem[addr] <- R[d]
+                OpCode::Store => {
+                    format!(
+                        "Op: {:?} - mem[{:02X}] set from d:R[{:01X}]{}({:04X})",
+                        op, addr, d, dc, dc )
+                },
+                // R[d] <- mem[R[t]]
+                OpCode::LoadIndirect => {
+                    format!(
+                        "Op: {:?} - d:R[{:01X}] set from mem[t:R{:01X}]={}({:04X}) where t:R[{:01X}]={:04X}",
+                        op, d, t, memory[tc as usize], memory[tc as usize], t, tc)
+                },
+                // mem[R[t]] <- R[d]
+                OpCode::StoreIndirect => {
+                    format!(
+                        "Op: {:?} - mem[t:R[{:01X}]={:04X}] set from d:R[{:01X}]{}({:04X})",
+                        op, t, tc, d, dc, dc)
+                },
+                OpCode::BranchZero => {
+                    format!("Op: {:?} - pc becomes {:02X} when d:R[{:01X}]={:?}({:04X}) == 0",
+                             op, addr & 0xFF, d, dc, dc )
+                },
+                OpCode::BranchPositive => {
+                    format!("Op: {:?} - pc becomes {:02X} when d:R[{:01X}]={:?}({:04X}) > 0",
+                             op, addr & 0xFF, d, dc, dc )
+                },
+                OpCode::JumpRegister => {
+                    format!("Op: {:?} - pc becomes {:02X} from d:R[{:01X}]={:04X}",
+                             op, dc & 0xFF, d, dc )
+                },
+                //R[d] <- pc; pc <- addr
+                OpCode::JumpAndLink => {
+                    format!("Op: {:?} - d:R[{:01X}] becomes pc and pc becomes {:02X}",
+                             op, d, addr & 0xFF )
+                },
+                OpCode::Halt => { format!("Op: {:?}", op )},
             }
 
         }
@@ -195,6 +235,10 @@ pub mod machine {
                 // F	jump and link	2	R[d] <- pc; pc <- addr
                 OpCode::JumpAndLink => {self.regs[d] = self.pc as u16; self.pc = address },
             };
+            self.regs[0] = 0;                // ensure reg[0] is always 0
+            // don't let reg[d] overflow a 16-bit integer
+            self.regs[d as usize] = self.regs[d as usize] & 0xFFFF;
+            self.pc = self.pc & 0xFF;        // don't let pc overflow an 8-bit integer
             true
         }
         pub(crate) fn set_memory_word(&mut self, index: usize, value: u16) {
@@ -239,16 +283,19 @@ pub mod machine {
                     let option = env.get_next_word();
                     let word = option.unwrap();
                     self.set_memory_word(0xFF as usize, word);
-                    println!("Read word to mem[255]: {}({:04x}x)", word, word);
+                    println!("Read word to mem[255]: {}({:04X}x)", word, word);
                 }
-                println!("Execute instruction: pc = {:02x}x; {:?};", &self.pc - 1, instruction );
-                instruction.dump_with_regs(&self.regs);
+                println!(
+                    "Execute @ pc = {:02X}x; {}",
+                    &self.pc - 1,
+                    instruction.format_for_pp(&self.regs, &self.memory)
+                );
                 running = self.execute_next_instruction(instruction);
                 if running {
                     if instruction.is_write_from_memory(&self.regs) {
                         let word = self.get_memory_word(0xFF as usize);
                         env.put_word(word);
-                        println!("Write word from mem[255]: {}({:04x}x)", word, word);
+                        println!("Write word from mem[255]: {}({:04X}x)", word, word);
                     }
                 }
             }
@@ -382,6 +429,80 @@ pub mod machine {
                 for i in 0..expected.len() {
                     assert_eq!(machine.get_memory_word(16 + i), expected[i]);
                 }
+            }
+        }
+        mod pp_instruction {
+            use super::*;
+
+            #[test]
+            fn instruction_pp_string() {
+                let mut machine = loaded_machine();
+                machine.regs[2] = 10;
+                machine.regs[3] = 20;
+                let instruction = Instruction::new(0x0,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::Halt);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),"Op: Halt");
+                let instruction = Instruction::new(0x1,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::Add);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: Add - d:R[1] set from: s:R[2]=10(000A) <op> t:R[3]=20(0014)");
+                let instruction = Instruction::new(0x2,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::Subtract);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: Subtract - d:R[1] set from: s:R[2]=10(000A) <op> t:R[3]=20(0014)");
+                let instruction = Instruction::new(0x3,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::And);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: And - d:R[1] set from: s:R[2]=10(000A) <op> t:R[3]=20(0014)");
+                let instruction = Instruction::new(0x4,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::Xor);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: Xor - d:R[1] set from: s:R[2]=10(000A) <op> t:R[3]=20(0014)");
+                let instruction = Instruction::new(0x5,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::ShiftLeft);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: ShiftLeft - d:R[1] set from: s:R[2]=10(000A) <op> t:R[3]=20(0014)");
+                let instruction = Instruction::new(0x6,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::ShiftRight);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: ShiftRight - d:R[1] set from: s:R[2]=10(000A) <op> t:R[3]=20(0014)");
+                let instruction = Instruction::new(0x7,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::LoadAddress);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: LoadAddress - d:R[1] becomes 0014");
+                let instruction = Instruction::new(0x8,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::Load);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: Load - d:R[1] set from mem[14]=51736(CA18)");
+                machine.regs[1] = 0x1212;
+                let instruction = Instruction::new(0x9,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::Store);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: Store - mem[14] set from d:R[1]4626(1212)");
+                let instruction = Instruction::new(0xA,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::LoadIndirect);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: LoadIndirect - d:R[1] set from mem[t:R3]=51736(CA18) where t:R[3]=0014");
+                let instruction = Instruction::new(0xB,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::StoreIndirect);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: StoreIndirect - mem[t:R[3]=0014] set from d:R[1]4626(1212)");
+                let instruction = Instruction::new(0xC,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::BranchZero);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: BranchZero - pc becomes 14 when d:R[1]=4626(1212) == 0");
+                let instruction = Instruction::new(0xD,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::BranchPositive);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: BranchPositive - pc becomes 14 when d:R[1]=4626(1212) > 0");
+                let instruction = Instruction::new(0xE,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::JumpRegister);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: JumpRegister - pc becomes 12 from d:R[1]=1212");
+                let instruction = Instruction::new(0xF,1,2, 3,20);
+                assert_eq!(instruction.op, OpCode::JumpAndLink);
+                assert_eq!(instruction.format_for_pp(&machine.regs, &machine.memory),
+                           "Op: JumpAndLink - d:R[1] becomes pc and pc becomes 14");
             }
         }
         mod fetch_instruction {
