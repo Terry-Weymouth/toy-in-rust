@@ -68,6 +68,31 @@ pub mod machine {
                 _ => false
             }
         }
+        pub fn dump_with_regs(&self, regs: &[u16; 16]) {
+            let (op, d, s, t, addr) = self.get_values();
+            let dc = regs[d as usize];
+            let sc = regs[s as usize];
+            let tc = regs[t as usize];
+            match self.op {
+                OpCode::Add => { println!("Op: {:?}, d:R[{:01x}]={}({:04x})", op, d, dc, dc)},
+                OpCode::Subtract => { println!("Op: {:?}", op )},
+                OpCode::And => { println!("Op: {:?}", op )},
+                OpCode::Xor => { println!("Op: {:?}", op )},
+                OpCode::ShiftLeft => { println!("Op: {:?}", op )},
+                OpCode::ShiftRight => { println!("Op: {:?}", op )},
+                OpCode::LoadAddress => { println!("Op: {:?}", op )},
+                OpCode::Load => { println!("Op: {:?}", op )},
+                OpCode::Store => { println!("Op: {:?}", op )},
+                OpCode::LoadIndirect => { println!("Op: {:?}", op )},
+                OpCode::StoreIndirect => { println!("Op: {:?}", op )},
+                OpCode::BranchZero => { println!("Op: {:?}", op )},
+                OpCode::BranchPositive => { println!("Op: {:?}", op )},
+                OpCode::JumpRegister => { println!("Op: {:?}", op )},
+                OpCode::JumpAndLink => { println!("Op: {:?}", op )},
+                OpCode::Halt => { println!("Op: {:?}", op )},
+            }
+
+        }
     }
 
     impl ProgramLoadWord {
@@ -180,7 +205,7 @@ pub mod machine {
             assert!(index < 256);
             self.memory[index]
         }
-        pub fn dump(&self) {
+        pub fn dump_regs(&self) {
             print!("pc: {:2x} regs: 0={:2x}, 1={:2x}, 2={:2x}, 3={:2x}, 4={:2x},",
                    self.pc, self.regs[0], self.regs[1], self.regs[2],
                    self.regs[3], self.regs[4]
@@ -193,6 +218,8 @@ pub mod machine {
                      self.regs[11], self.regs[12], self.regs[13],
                      self.regs[14], self.regs[15],
             );
+        }
+        pub fn dump_memory(&self) {
             println!(" memory...");
             for i in 0..15 {
                 let start = 16 * i;
@@ -212,12 +239,16 @@ pub mod machine {
                     let option = env.get_next_word();
                     let word = option.unwrap();
                     self.set_memory_word(0xFF as usize, word);
+                    println!("Read word to mem[255]: {}({:04x}x)", word, word);
                 }
+                println!("Execute instruction: pc = {:02x}x; {:?};", &self.pc - 1, instruction );
+                instruction.dump_with_regs(&self.regs);
                 running = self.execute_next_instruction(instruction);
                 if running {
                     if instruction.is_write_from_memory(&self.regs) {
                         let word = self.get_memory_word(0xFF as usize);
                         env.put_word(word);
+                        println!("Write word from mem[255]: {}({:04x}x)", word, word);
                     }
                 }
             }

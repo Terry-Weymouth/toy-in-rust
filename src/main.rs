@@ -21,9 +21,11 @@ fn main() {
     let mut machine = Machine::new();
     let mut external = ExternalEnv::new(vec![25, 39]);
     machine.load(loads);
-    external.dump();
-    machine.dump();
+    // external.dump();
+    // machine.dump_regs();
+    // machine.dump_memory();
     machine.run(&mut external);
-    external.dump();
-    machine.dump();
+    // external.dump();
+    // machine.dump_regs();
+    // machine.dump_memory();
 }
