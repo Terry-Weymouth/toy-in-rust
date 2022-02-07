@@ -1,5 +1,5 @@
 pub mod program_reader {
-    use crate::machine::machine::ProgramLoadWord;
+    use crate::machine::ProgramLoadWord;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::path::Path;

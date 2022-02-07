@@ -8,7 +8,7 @@ pub mod external_env {
     }
 
     impl ExternalEnv {
-        pub(crate) fn new(input: Vec<u16>) -> Self {
+        pub fn new(input: Vec<u16>) -> Self {
             let output = vec![];
             let mut str = String::from("");
             for item in &input {
@@ -64,7 +64,7 @@ pub mod external_env {
 
 #[cfg(test)]
 mod external_env_tests {
-    use crate::machine::external_env::external_env::ExternalEnv;
+    use super::external_env::ExternalEnv;
 
     fn test_read_next_word(env: &mut ExternalEnv, expected: u16) {
         let opt_value = env.get_next_word();

@@ -4,14 +4,9 @@
 // see: https://introcs.cs.princeton.edu/java/64simulator/TOY.java.html
 // program examples at: https://introcs.cs.princeton.edu/java/63programming/
 
-mod machine;
-
 use machine::machine::Machine;
-use machine::external_env::external_env::ExternalEnv;
 use machine::program_reader::program_reader::ProgramReader;
-#[macro_use]
-extern crate num_derive;
-
+use machine::external_env::external_env::ExternalEnv;
 
 fn main() {
     let filename: &str = "program.txt";
@@ -22,10 +17,10 @@ fn main() {
     let mut external = ExternalEnv::new(vec![25, 39]);
     machine.load(loads);
     // external.dump();
-    // machine.dump_regs();
-    // machine.dump_memory();
+    // helpers.dump_regs();
+    // helpers.dump_memory();
     machine.run(&mut external);
     // external.dump();
-    // machine.dump_regs();
-    // machine.dump_memory();
+    // helpers.dump_regs();
+    // helpers.dump_memory();
 }
