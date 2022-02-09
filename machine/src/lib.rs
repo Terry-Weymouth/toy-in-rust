@@ -163,9 +163,31 @@ pub mod machine {
                 self.memory[word.address as usize] = word.content
             }
         }
+
         fn set_program_counter(&mut self, pc: u8) {
             self.pc = pc;
         }
+        pub fn get_program_counter(&self) -> u8 {
+            self.pc
+        }
+        pub fn get_regs(&self) -> Vec<u16> {
+            self.regs.to_vec()
+        }
+        pub fn set_reg(&mut self, i: usize, value: u16) {
+            self.regs[i] = value;
+        }
+        pub fn get_memory(&self) -> Vec<u16> {
+            self.memory.to_vec()
+        }
+        pub fn set_memory_word(&mut self, index: usize, value: u16) {
+            assert!(index < 256);
+            self.memory[index] = value;
+        }
+        pub fn get_memory_word(&self, index: usize) -> u16 {
+            assert!(index < 256);
+            self.memory[index]
+        }
+
         pub(crate) fn get_next_instruction(&mut self) -> Instruction {
             let local_pc = self.pc;
             let word = self.get_memory_word(local_pc as usize);
@@ -243,14 +265,6 @@ pub mod machine {
             self.regs[d as usize] = self.regs[d as usize] & 0xFFFF;
             self.pc = self.pc & 0xFF;        // don't let pc overflow an 8-bit integer
             true
-        }
-        pub(crate) fn set_memory_word(&mut self, index: usize, value: u16) {
-            assert!(index < 256);
-            self.memory[index] = value;
-        }
-        pub(crate) fn get_memory_word(&self, index: usize) -> u16 {
-            assert!(index < 256);
-            self.memory[index]
         }
         pub fn dump_regs(&self) {
             print!("pc: {:2x} regs: 0={:2x}, 1={:2x}, 2={:2x}, 3={:2x}, 4={:2x},",
