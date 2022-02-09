@@ -5,7 +5,7 @@ use machine::machine::Machine as Toy;
 use serde::Serialize;
 
 #[wasm_bindgen]
-pub struct Interface {
+pub struct Portal {
     backing: Toy,
     machine: Machine,
 }
@@ -18,7 +18,7 @@ pub struct Machine {
 }
 
 #[wasm_bindgen]
-impl Interface {
+impl Portal {
     pub fn new() -> Self {
         let backing = Toy::new();
         let regs = backing.get_regs().iter().map(|&value| value as i32).collect();
@@ -37,7 +37,7 @@ impl Interface {
 
     pub fn load_regs(&mut self, regs: Vec<i32>) {
         for i in 0..16.min(regs.len()){
-            self.machine.memory[i] = regs[i];
+            self.machine.regs[i] = regs[i];
             self.backing.set_reg(i, regs[i] as u16);
         }
     }
@@ -46,11 +46,16 @@ impl Interface {
         self.machine.regs.clone()
     }
 
+    pub fn reg_as_string(&self, index: usize) -> String {
+        let value = self.machine.regs[index];
+        format!("R[{:01X}]={:04X}", index, value)
+    }
+
     pub fn dump_regs(&self) -> String {
-        let string: String = self.regs().iter().enumerate().
-            map(|(i, r)| format!("R[{}]={}", i, r))
+        let strings: Vec<String> = self.regs().iter().enumerate().
+            map(|(i, r)| format!("R[{:01x}]={:04x}", i, r))
             .collect();
-        string
+        strings.join(", ")
     }
 }
 
@@ -63,4 +68,9 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen]
 extern {
     fn alert(s: &str);
+}
+
+#[wasm_bindgen]
+pub fn hello(s: &str) {
+    alert(s);
 }
