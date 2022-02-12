@@ -24,3 +24,12 @@ fn program_counter() {
     portal.set_pc(25);
     assert_eq!(portal.get_pc(), 25);
 }
+
+#[wasm_bindgen_test]
+fn load_program() {
+    let mut portal = Portal::new();
+    portal.load_fixed_program();
+    let value = portal.memory_as_string(0x10);
+    assert_eq!(value, "8AFF");
+}
+

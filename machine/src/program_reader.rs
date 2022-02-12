@@ -26,7 +26,7 @@ pub mod program_reader {
         pub fn load_from_file(&mut self, filename: impl AsRef<Path>) {
             let _ = &self.lines_from_file(filename);
         }
-        pub(crate) fn load_from_vec(&mut self, lines: Vec<String>) {
+        pub fn load_from_vec(&mut self, lines: Vec<String>) {
             self.lines = lines;
         }
         pub fn parse(&self) -> Vec<ProgramLoadWord> {

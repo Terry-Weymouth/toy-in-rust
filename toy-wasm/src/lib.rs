@@ -2,6 +2,7 @@ mod utils;
 
 use wasm_bindgen::prelude::*;
 use machine::machine::Machine as Toy;
+use machine::program_reader::program_reader::ProgramReader;
 use serde::Serialize;
 
 #[wasm_bindgen]
@@ -74,7 +75,17 @@ impl Portal {
             "18: 9CFF",   // write from R[C]               StdOut.println(c);
             "19: 0000"    // halt
         ];
-        println!("{}",test_program_strings[0]);
+        let mut reader = ProgramReader::new();
+        let mut program_text: Vec<String> = vec![];
+        for s in test_program_strings {
+            program_text.push(String::from(s));
+        }
+        reader.load_from_vec(program_text);
+        let loads = reader.parse();
+        self.backing.load(loads);
+        self.machine.regs = self.backing.get_regs().iter().map(|&value| value as i32).collect();
+        self.machine.memory = self.backing.get_memory().iter().map(|&value| value as i32).collect();
+        self.machine.pc = self.backing.get_program_counter() as i32;
     }
 }
 
