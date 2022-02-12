@@ -42,20 +42,39 @@ impl Portal {
         }
     }
 
-    pub fn regs(&self) -> Vec<i32> {
-        self.machine.regs.clone()
-    }
-
     pub fn reg_as_string(&self, index: usize) -> String {
         let value = self.machine.regs[index];
         format!("{:04X}", value)
     }
 
-    pub fn dump_regs(&self) -> String {
-        let strings: Vec<String> = self.regs().iter().enumerate().
-            map(|(i, r)| format!("R[{:01x}]={:04x}", i, r))
-            .collect();
-        strings.join(", ")
+    pub fn memory_as_string(&self, index: usize) -> String {
+        let value = self.machine.memory[index];
+        format!("{:04X}", value)
+    }
+
+    pub fn get_pc(&self) -> i32 {
+        self.machine.pc
+    }
+
+    pub fn set_pc(&mut self, value: i32){
+        self.machine.pc = value;
+        self.backing.set_program_counter(value as u8);
+    }
+
+    pub fn load_fixed_program() {
+        let test_program_strings = vec![
+            "10: 8AFF",   // read to R[A]                  a = StdIn.readInt();
+            "11: 8BFF",   // read to R[B]                  b = StdIn.readInt();
+            "12: 7C00",   // R[C] <- 0000                  c = 0;
+            "13: 7101",   // R[1] <- 0001                  the constant 1
+            "14: CA18",   // if (R[A] == 0) goto 18        while (a != 0) {
+            "15: 1CCB",   // R[C] <- R[C] + R[B]              c += b;
+            "16: 2AA1",   // R[A] <- R[A] - R[1]              a -= 1;
+            "17: C014",   // goto 14                       }
+            "18: 9CFF",   // write from R[C]               StdOut.println(c);
+            "19: 0000"    // halt
+        ];
+        println!("{}",test_program_strings[0]);
     }
 }
 
@@ -64,13 +83,3 @@ impl Portal {
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-extern {
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub fn hello(s: &str) {
-    alert(s);
-}

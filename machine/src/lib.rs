@@ -164,7 +164,7 @@ pub mod machine {
             }
         }
 
-        fn set_program_counter(&mut self, pc: u8) {
+        pub fn set_program_counter(&mut self, pc: u8) {
             self.pc = pc;
         }
         pub fn get_program_counter(&self) -> u8 {
