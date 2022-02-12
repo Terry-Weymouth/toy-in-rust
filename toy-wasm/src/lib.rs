@@ -61,7 +61,7 @@ impl Portal {
         self.backing.set_program_counter(value as u8);
     }
 
-    pub fn load_fixed_program() {
+    pub fn load_fixed_program(&mut self) {
         let test_program_strings = vec![
             "10: 8AFF",   // read to R[A]                  a = StdIn.readInt();
             "11: 8BFF",   // read to R[B]                  b = StdIn.readInt();

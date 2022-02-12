@@ -4,19 +4,23 @@
 
 extern crate wasm_bindgen_test;
 use wasm_bindgen_test::*;
-use toy_wasm::Interface;
+use toy_wasm::Portal;
 
 wasm_bindgen_test_configure!(run_in_browser);
 
 #[wasm_bindgen_test]
-fn pass() {
-    assert_eq!(1 + 1, 2);
+fn reg_dump() {
+    let mut portal = Portal::new();
+    portal.load_regs(vec![0x111, 0x222, 0x1234, 0, 0x555, 0x666, 0x777]);
+    assert_eq!(portal.reg_as_string(1), "0222");
+    assert_eq!(portal.reg_as_string(2), "1234");
+    assert_eq!(portal.reg_as_string(3), "0000");
+    assert_eq!(portal.reg_as_string(4), "0555");
 }
 
 #[wasm_bindgen_test]
-fn reg_dump() {
-    let mut machine_interface = Interface::new();
-    machine_interface.load_regs(vec![0, 0, 0, 0, 5, 6, 777, 0, 0, 10, 0, 0, 0, 0, 0, 0]);
-    let reg_string = machine_interface.dump_regs();
-    assert_eq!(reg_string, "R[0]=0R[1]=0R[2]=0R[3]=0R[4]=0R[5]=0R[6]=0R[7]=0R[8]=0R[9]=0R[10]=0R[11]=0R[12]=0R[13]=0R[14]=0R[15]=0");
+fn program_counter() {
+    let mut portal = Portal::new();
+    portal.set_pc(25);
+    assert_eq!(portal.get_pc(), 25);
 }
