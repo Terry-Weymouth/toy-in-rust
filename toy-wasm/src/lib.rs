@@ -48,7 +48,7 @@ impl Portal {
 
     pub fn reg_as_string(&self, index: usize) -> String {
         let value = self.machine.regs[index];
-        format!("R[{:01X}]={:04X}", index, value)
+        format!("{:04X}", value)
     }
 
     pub fn dump_regs(&self) -> String {
