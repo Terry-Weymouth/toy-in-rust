@@ -9,7 +9,6 @@ use machine::external_env::external_env::ExternalEnv;
 pub struct Portal {
     backing: Toy,
     external: ExternalEnv,
-    running: bool,
 }
 
 #[wasm_bindgen]
@@ -17,11 +16,9 @@ impl Portal {
     pub fn new() -> Self {
         let backing = Toy::new();
         let external = ExternalEnv::new(vec![]);
-        let running = false;
         Self {
             backing,
             external,
-            running
         }
     }
 
@@ -39,6 +36,21 @@ impl Portal {
     pub fn memory_as_string(&self, index: usize) -> String {
         let value = self.backing.get_memory_word(index);
         format!("{:04X}", value)
+    }
+
+    pub fn inputs_as_string(&self) -> String {
+        self.external.input_for_display()
+    }
+
+    pub fn outputs_as_string(&self) -> String {
+        self.external.output_for_display()
+    }
+
+    pub fn next_instruction_as_string(&self) -> String{
+        let pc = self.backing.get_program_counter();
+        let instruction_word = self.backing.get_memory_word(pc as usize);
+        let operation = self.backing.current_instruction_pp(instruction_word);
+        format!("{:02X}: {:04X} - {}", pc, instruction_word, operation)
     }
 
     pub fn get_pc(&self) -> i32 {
@@ -77,11 +89,15 @@ impl Portal {
     }
 
     pub fn set_program_running(&mut self) {
-        self.running = true;
+        self.backing.set_running();
+    }
+
+    pub fn reset_program_running(&mut self) {
+        self.backing.reset_running();
     }
 
     pub fn get_program_running(&mut self) -> bool {
-        self.running
+        self.backing.get_running()
     }
 
     pub fn step_program(&mut self) {
@@ -91,6 +107,6 @@ impl Portal {
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
-// #[cfg(feature = "wee_alloc")]
-// #[global_allocator]
-// static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;

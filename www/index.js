@@ -2,6 +2,7 @@ import * as wasm from "toy-wasm";
 
 let previous_pc = 0;
 let pc = 0;
+let portal = wasm.Portal.new();
 
 function regs_header_to_table(table) {
     let row_labels = ["Regs","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"]
@@ -133,25 +134,48 @@ function refresh_display() {
         memory_update_data_in_table(table.rows[1 + i], i*16, memory_data);
     }
 
+    let running = portal.get_program_running();
+    step_button.disabled = !running;
+    run_button.disabled = !running;
+    let running_text = "running";
+    if (!running) {
+        running_text = "not " + running_text;
+    }
+    document.getElementById("status").innerHTML = running_text;
+    document.getElementById("input_values").innerHTML =
+        portal.inputs_as_string();
+    document.getElementById("output_values").innerHTML =
+        portal.outputs_as_string();
+    document.getElementById("instruction").innerHTML =
+        portal.next_instruction_as_string();
+
     pc = portal.get_pc();
     pc_indicator(table, previous_pc, false);
     pc_indicator(table, pc, true);
     previous_pc = pc;
 }
 
-function button_clicked() {
+function step_on_click() {
     portal.step_program();
     refresh_display();
 }
+function run_on_click() {
+}
 
-let button = document.getElementById("button");
-button.addEventListener("click", button_clicked);
+function restart() {
+}
 
-let portal = wasm.Portal.new();
-portal.set_pc(16);
+let step_button = document.getElementById("step");
+step_button.addEventListener("click", step_on_click);
+let run_button = document.getElementById("run");
+run_button.addEventListener("click", run_on_click);
+let restart_button = document.getElementById("restart");
+restart_button.addEventListener("click", restart);
+
 portal.load_fixed_program();
 portal.set_pc(0x10);
 portal.push_to_input(2);
 portal.push_to_input(3);
 portal.set_program_running();
 set_up_display();
+refresh_display();

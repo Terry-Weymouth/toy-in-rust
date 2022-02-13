@@ -11,9 +11,16 @@
     }
   </style>
   <body>
-    <button id="button">Is this a button?</button><br>
-    <table id="regsTable"></table><br>
-    <table id="memoryTable"></table><br>
+    <button id="step">Step</button> <button id="run">Run</button> <button id="restart">Restart</button>
+    <span>The program is <b id="status">running</b>.</span>
+    <br/><br/>
+    <table id="regsTable"></table><br/>
+    <table>
+      <tr><th>Next Instruction: </th><td id="instruction">(Next Instruction Appears Here)</td></tr>
+      <tr><th>Input: </th><td id="input_values">(Input Values Appear Here)</td></tr>
+      <tr><th>Output: </th><td id="output_values">(Output Values Appear Here)</td></tr>
+    </table><br/>
+    <table id="memoryTable"></table><br/>
     <script src="./bootstrap.js"></script>
   </body>
 </html>

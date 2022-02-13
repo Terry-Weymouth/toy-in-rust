@@ -198,6 +198,9 @@ pub mod machine {
             let local_pc = self.pc;
             let word = self.get_memory_word(local_pc as usize);
             self.set_program_counter(local_pc + 1); // default
+            self.instruction_from_word(word)
+        }
+        fn instruction_from_word(&self, word: u16) -> Instruction {
             let op= (word >> 12) as u8;
             let d = (word >> 8 & 0xF) as u8;
             let s = (word >> 4 & 0xF) as u8;
@@ -272,6 +275,10 @@ pub mod machine {
             self.pc = self.pc & 0xFF;        // don't let pc overflow an 8-bit integer
             true
         }
+        pub fn current_instruction_pp(&self, word: u16) -> String {
+            let instruction = self.instruction_from_word(word);
+            instruction.format_for_pp(&self.regs, &self.memory)
+        }
         pub fn dump_regs(&self) {
             print!("pc: {:2x} regs: 0={:2x}, 1={:2x}, 2={:2x}, 3={:2x}, 4={:2x},",
                    self.pc, self.regs[0], self.regs[1], self.regs[2],
@@ -306,6 +313,9 @@ pub mod machine {
         }
 
         pub fn run_one_step(&mut self, env: &mut ExternalEnv, print_trace: bool){
+            if !self.get_running() {
+                return
+            }
             let instruction = &self.get_next_instruction();
             if instruction.is_read_to_memory(&self.regs) {
                 let option = env.get_next_word();

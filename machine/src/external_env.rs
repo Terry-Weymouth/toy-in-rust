@@ -63,6 +63,26 @@ pub mod external_env {
                 println!("  {}", self.output_for_dump);
             }
         }
+        pub fn input_for_display(&self) -> String {
+            if self.input.len() == 0{
+                "(No input)".into()
+            } else {
+                let string_vec: Vec<String>  = self.input.iter()
+                    .map(|value| format!("{}({:04X})", value, value))
+                    .collect();
+                string_vec.join(", ").into()
+            }
+        }
+        pub fn output_for_display(&self) -> String {
+            if self.output.len() == 0{
+                "(No output)".into()
+            } else {
+                let string_vec: Vec<String> = self.output.iter()
+                    .map(|value| format!("{}({:04X})", value, value))
+                    .collect();
+                string_vec.join(", ").into()
+            }
+        }
     }
 }
 
