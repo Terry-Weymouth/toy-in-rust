@@ -33,3 +33,11 @@ fn load_program() {
     assert_eq!(value, "8AFF");
 }
 
+#[wasm_bindgen_test]
+fn step_program() {
+    let mut portal = Portal::new();
+    portal.load_fixed_program();
+    // portal.load_external_in([20, 30]);
+    // portal.init_program();
+    // portal.step_program();
+}
