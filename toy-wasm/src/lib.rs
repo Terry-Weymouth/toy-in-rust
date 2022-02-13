@@ -3,62 +3,42 @@ mod utils;
 use wasm_bindgen::prelude::*;
 use machine::machine::Machine as Toy;
 use machine::program_reader::program_reader::ProgramReader;
-use serde::Serialize;
 
 #[wasm_bindgen]
 pub struct Portal {
     backing: Toy,
-    machine: Machine,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct Machine {
-    pub regs: Vec<i32>,
-    pub memory: Vec<i32>,
-    pub pc: i32,
 }
 
 #[wasm_bindgen]
 impl Portal {
     pub fn new() -> Self {
         let backing = Toy::new();
-        let regs = backing.get_regs().iter().map(|&value| value as i32).collect();
-        let memory = backing.get_memory().iter().map(|&value| value as i32).collect();
-        let pc = backing.get_program_counter() as i32;
-        let machine = Machine {
-            regs,
-            memory,
-            pc,
-        };
         Self {
             backing,
-            machine,
         }
     }
 
     pub fn load_regs(&mut self, regs: Vec<i32>) {
         for i in 0..16.min(regs.len()){
-            self.machine.regs[i] = regs[i];
             self.backing.set_reg(i, regs[i] as u16);
         }
     }
 
     pub fn reg_as_string(&self, index: usize) -> String {
-        let value = self.machine.regs[index];
+        let value = self.backing.get_regs()[index];
         format!("{:04X}", value)
     }
 
     pub fn memory_as_string(&self, index: usize) -> String {
-        let value = self.machine.memory[index];
+        let value = self.backing.get_memory_word(index);
         format!("{:04X}", value)
     }
 
     pub fn get_pc(&self) -> i32 {
-        self.machine.pc
+        self.backing.get_program_counter().into()
     }
 
     pub fn set_pc(&mut self, value: i32){
-        self.machine.pc = value;
         self.backing.set_program_counter(value as u8);
     }
 
@@ -83,9 +63,6 @@ impl Portal {
         reader.load_from_vec(program_text);
         let loads = reader.parse();
         self.backing.load(loads);
-        self.machine.regs = self.backing.get_regs().iter().map(|&value| value as i32).collect();
-        self.machine.memory = self.backing.get_memory().iter().map(|&value| value as i32).collect();
-        self.machine.pc = self.backing.get_program_counter() as i32;
     }
 }
 

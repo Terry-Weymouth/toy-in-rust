@@ -75,7 +75,7 @@ function collect_memory_data(portal) {
 function memory_data_to_table(table_row, start_index, string_array) {
     for(var i = 0; i < 16; i++) {
         var td = document.createElement("TD");
-        var text = document.createTextNode(string_array[start_index, i]);
+        var text = document.createTextNode(string_array[start_index + i]);
         td.appendChild(text);
         table_row.appendChild(td);
     }
@@ -92,8 +92,8 @@ function pc_indicator(table, address, set) {
 }
 
 function button_clicked() {
+    portal
     let table = document.getElementById("memoryTable");
-    pc += 1;
     pc_indicator(table, previous_pc, false);
     pc_indicator(table, pc, true);
     previous_pc = pc;
@@ -103,14 +103,14 @@ let button = document.getElementById("button");
 button.addEventListener("click", button_clicked);
 
 let portal = wasm.Portal.new();
-portal.load_regs([9, 8, 7, 6, 5, 4, 3, 2, 1]);
 portal.set_pc(16);
-//portal.load_fixed_program();
+portal.load_fixed_program();
 
 pc = portal.get_pc();
 
 let regs_data = collect_regs_data(portal);
 let memory_data = collect_memory_data(portal);
+console.log("memory = ", memory_data);
 
 let table = document.getElementById("regsTable");
 regs_header_to_table(table);
