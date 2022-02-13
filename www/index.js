@@ -3,6 +3,7 @@ import * as wasm from "toy-wasm";
 let previous_pc = 0;
 let pc = 0;
 let portal = wasm.Portal.new();
+let running_delay = 1000;
 
 function regs_header_to_table(table) {
     let row_labels = ["Regs","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"]
@@ -160,6 +161,17 @@ function step_on_click() {
     refresh_display();
 }
 function run_on_click() {
+    run_button.disabled = true
+    let running = portal.get_program_running();
+    if (running){
+        portal.step_program();
+        refresh_display();
+    }
+    running = portal.get_program_running();
+    if (running) {
+        console.log("running delay", running_delay)
+        setTimeout(run_on_click, running_delay);
+    }
 }
 
 function restart() {
