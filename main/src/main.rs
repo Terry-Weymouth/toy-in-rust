@@ -1,9 +1,3 @@
-// First pass... a translation of the java version of TOY from the links below
-// Goal: a web based interface to TOY - possibly a step up from "switches"
-// see: https://introcs.cs.princeton.edu/java/62toy/
-// see: https://introcs.cs.princeton.edu/java/64simulator/TOY.java.html
-// program examples at: https://introcs.cs.princeton.edu/java/63programming/
-
 use machine::machine::Machine;
 use machine::program_reader::program_reader::ProgramReader;
 use machine::external_env::external_env::ExternalEnv;
