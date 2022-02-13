@@ -85,9 +85,7 @@ impl Portal {
     }
 
     pub fn step_program(&mut self) {
-        if self.running {
-            self.backing.run_one_step(&mut self.external, false);
-        }
+        self.backing.run_one_step(&mut self.external, false);
     }
 }
 

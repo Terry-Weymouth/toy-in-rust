@@ -15,7 +15,7 @@ pub mod machine {
         pc: u8,
         regs: [u16; 16],
         pub(crate) memory: [u16; 256],
-
+        running: bool,
     }
 
     #[derive(FromPrimitive, ToPrimitive)]
@@ -153,10 +153,12 @@ pub mod machine {
             let pc: u8 = 0;
             let memory: [u16; 256] = [0; 256];
             let regs: [u16; 16] = [0; 16];
+            let running = false;
             Self {
                 pc,
                 regs,
                 memory,
+                running,
             }
         }
         pub fn load(&mut self, loads: Vec<ProgramLoadWord>) {
@@ -165,6 +167,9 @@ pub mod machine {
             }
         }
 
+        pub fn set_running(&mut self) { self.running = true; }
+        pub fn reset_running(&mut self) { self.running = false; }
+        pub fn get_running(&self) -> bool { self.running }
         pub fn set_program_counter(&mut self, pc: u8) {
             self.pc = pc;
         }
@@ -294,13 +299,13 @@ pub mod machine {
         }
         pub fn run(&mut self, env: &mut ExternalEnv) {
             self.set_program_counter(0x10);
-            let mut running = true;
-            while running{
-                running = self.run_one_step(env, true);
+            self.set_running();
+            while self.get_running(){
+                self.run_one_step(env, true);
             }
         }
 
-        pub fn run_one_step(&mut self, env: &mut ExternalEnv, print_trace: bool) -> bool {
+        pub fn run_one_step(&mut self, env: &mut ExternalEnv, print_trace: bool){
             let instruction = &self.get_next_instruction();
             if instruction.is_read_to_memory(&self.regs) {
                 let option = env.get_next_word();
@@ -327,7 +332,11 @@ pub mod machine {
                     }
                 }
             }
-            running
+            if running {
+                self.set_running();
+            } else {
+                self.reset_running();
+            }
         }
     }
 
@@ -912,13 +921,14 @@ pub mod machine {
                 for i in 0..expected.len() {
                     assert_eq!(machine.get_memory_word(16 + i), expected[i]);
                 }
+                machine.set_running();
                 machine.set_program_counter(0x10);
                 assert_eq!(machine.get_program_counter(), 0x10);
-                let mut running = machine.run_one_step(&mut env, false);
-                assert!(running);
+                machine.run_one_step(&mut env, false);
+                assert!(machine.get_running());
                 assert_eq!(machine.get_program_counter(), 0x11);
-                while running {
-                    running = machine.run_one_step(&mut env, false);
+                while machine.get_running() {
+                    machine.run_one_step(&mut env, false);
                 }
                 assert_eq!(env.peek_at_last_output(), 1200);
             }
