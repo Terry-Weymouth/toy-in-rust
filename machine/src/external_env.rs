@@ -28,6 +28,10 @@ pub mod external_env {
                 output_for_dump: String::from(""),
             }
         }
+        pub fn push_to_input(&mut self, value: u16) {
+            self.input.push(value);
+        }
+
         pub(crate) fn is_end_of_input(&self) -> bool{
             self.input.len() == 0
         }
@@ -109,5 +113,14 @@ mod external_env_tests {
             assert_eq!(word, env.peek_at_last_output())
         }
         assert_eq!(env.output_for_dump, "Output: 4660(1234x), 9029(2345x), 13398(3456x)");
+    }
+
+    #[test]
+    fn push_value_to_input() {
+        let mut env = ExternalEnv::new(vec![]);
+        env.push_to_input(10);
+        assert!(!env.is_end_of_input());
+        test_read_next_word(&mut env, 10);
+        assert!(env.is_end_of_input());
     }
 }

@@ -3,18 +3,25 @@ mod utils;
 use wasm_bindgen::prelude::*;
 use machine::machine::Machine as Toy;
 use machine::program_reader::program_reader::ProgramReader;
+use machine::external_env::external_env::ExternalEnv;
 
 #[wasm_bindgen]
 pub struct Portal {
     backing: Toy,
+    external: ExternalEnv,
+    running: bool,
 }
 
 #[wasm_bindgen]
 impl Portal {
     pub fn new() -> Self {
         let backing = Toy::new();
+        let external = ExternalEnv::new(vec![]);
+        let running = false;
         Self {
             backing,
+            external,
+            running
         }
     }
 
@@ -64,10 +71,28 @@ impl Portal {
         let loads = reader.parse();
         self.backing.load(loads);
     }
+
+    pub fn push_to_input(&mut self, value: i32) {
+        self.external.push_to_input(value as u16);
+    }
+
+    pub fn set_program_running(&mut self) {
+        self.running = true;
+    }
+
+    pub fn get_program_running(&mut self) -> bool {
+        self.running
+    }
+
+    pub fn step_program(&mut self) {
+        if self.running {
+            self.backing.run_one_step(&mut self.external, false);
+        }
+    }
 }
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+// #[cfg(feature = "wee_alloc")]
+// #[global_allocator]
+// static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;

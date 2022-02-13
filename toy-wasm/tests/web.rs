@@ -37,7 +37,15 @@ fn load_program() {
 fn step_program() {
     let mut portal = Portal::new();
     portal.load_fixed_program();
-    // portal.load_external_in([20, 30]);
-    // portal.init_program();
-    // portal.step_program();
+    portal.set_pc(0x10);
+    portal.push_to_input(20);
+    portal.push_to_input(30);
+    let value = portal.memory_as_string(0xFF);
+    assert_eq!(value, "0000");
+    portal.set_program_running();
+    portal.step_program();
+    let running = portal.get_program_running();
+    assert_eq!(running, true);
+    let value = portal.memory_as_string(0xFF);
+    assert_eq!(value, "0014");
 }

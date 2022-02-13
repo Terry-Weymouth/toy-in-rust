@@ -92,7 +92,7 @@ function pc_indicator(table, address, set) {
 }
 
 function button_clicked() {
-    portal
+    portal.step_program();
     let table = document.getElementById("memoryTable");
     pc_indicator(table, previous_pc, false);
     pc_indicator(table, pc, true);
@@ -110,7 +110,6 @@ pc = portal.get_pc();
 
 let regs_data = collect_regs_data(portal);
 let memory_data = collect_memory_data(portal);
-console.log("memory = ", memory_data);
 
 let table = document.getElementById("regsTable");
 regs_header_to_table(table);
@@ -123,3 +122,4 @@ for (var i = 0; i < 16; i++) {
 }
 pc_indicator(table, pc, true);
 previous_pc = pc;
+portal.set_program_running();
