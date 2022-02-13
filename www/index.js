@@ -175,6 +175,13 @@ function run_on_click() {
 }
 
 function restart() {
+    portal.clear_regs_and_memory();
+    portal.load_fixed_program();
+    portal.set_pc(0x10);
+    portal.push_to_input(2);
+    portal.push_to_input(3);
+    portal.set_program_running();
+    refresh_display();
 }
 
 let step_button = document.getElementById("step");

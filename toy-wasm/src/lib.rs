@@ -103,6 +103,13 @@ impl Portal {
     pub fn step_program(&mut self) {
         self.backing.run_one_step(&mut self.external, false);
     }
+
+    pub fn clear_regs_and_memory(&mut self) {
+        let backing = Toy::new();
+        let external = ExternalEnv::new(vec![]);
+        self.backing = backing;
+        self.external = external;
+    }
 }
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
