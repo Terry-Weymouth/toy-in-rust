@@ -15,6 +15,7 @@ pub mod machine {
         pc: u8,
         regs: [u16; 16],
         pub(crate) memory: [u16; 256],
+
     }
 
     #[derive(FromPrimitive, ToPrimitive)]
@@ -295,27 +296,38 @@ pub mod machine {
             self.set_program_counter(0x10);
             let mut running = true;
             while running{
-                let instruction = &self.get_next_instruction();
-                if instruction.is_read_to_memory(&self.regs) {
-                    let option = env.get_next_word();
-                    let word = option.unwrap();
-                    self.set_memory_word(0xFF as usize, word);
+                running = self.run_one_step(env, true);
+            }
+        }
+
+        pub fn run_one_step(&mut self, env: &mut ExternalEnv, print_trace: bool) -> bool {
+            let instruction = &self.get_next_instruction();
+            if instruction.is_read_to_memory(&self.regs) {
+                let option = env.get_next_word();
+                let word = option.unwrap();
+                self.set_memory_word(0xFF as usize, word);
+                if print_trace {
                     println!("Read word to mem[255]: {}({:04X}x)", word, word);
                 }
+            }
+            if print_trace {
                 println!(
                     "Execute @ pc = {:02X}x; {}",
                     &self.pc - 1,
                     instruction.format_for_pp(&self.regs, &self.memory)
                 );
-                running = self.execute_next_instruction(instruction);
-                if running {
-                    if instruction.is_write_from_memory(&self.regs) {
-                        let word = self.get_memory_word(0xFF as usize);
-                        env.put_word(word);
+            }
+            let running = self.execute_next_instruction(instruction);
+            if running {
+                if instruction.is_write_from_memory(&self.regs) {
+                    let word = self.get_memory_word(0xFF as usize);
+                    env.put_word(word);
+                    if print_trace {
                         println!("Write word from mem[255]: {}({:04X}x)", word, word);
                     }
                 }
             }
+            running
         }
     }
 
@@ -886,6 +898,29 @@ pub mod machine {
                 }
                 assert_eq!(machine.regs[d as usize], word_to_write);
                 assert_eq!(machine.memory[0xFF as usize], word_to_write);
+            }
+        }
+        mod run_one_step {
+            use super::*;
+
+            #[test]
+            fn run_one_step_test() {
+                let mut env = ExternalEnv::new(vec![30, 40]);
+                let mut machine = loaded_machine();
+                let expected = [0x8AFF, 0x8BFF, 0x7C00, 0x7101, 0xCA18,
+                    0x1CCB, 0x2AA1, 0xC014, 0x9CFF, 0x0000];
+                for i in 0..expected.len() {
+                    assert_eq!(machine.get_memory_word(16 + i), expected[i]);
+                }
+                machine.set_program_counter(0x10);
+                assert_eq!(machine.get_program_counter(), 0x10);
+                let mut running = machine.run_one_step(&mut env, false);
+                assert!(running);
+                assert_eq!(machine.get_program_counter(), 0x11);
+                while running {
+                    running = machine.run_one_step(&mut env, false);
+                }
+                assert_eq!(env.peek_at_last_output(), 1200);
             }
         }
     }
