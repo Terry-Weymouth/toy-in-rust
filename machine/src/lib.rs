@@ -83,7 +83,7 @@ pub mod machine {
                 OpCode::ShiftLeft | OpCode::ShiftRight
                 => {
                     format!(
-                        "Op: {:?} - d:R[{:01X}] set from: s:R[{:01X}]={}({:04X}) <op> t:R[{:01X}]={}({:04X})",
+                        "Op: {:?} - d:R[{:01X}] set from: s:R[{:01X}]={}({:04X}) *op* t:R[{:01X}]={}({:04X})",
                         op, d, s, sc, sc, t, tc, tc)
                 },
                 // R[d] <- addr
@@ -94,27 +94,53 @@ pub mod machine {
                 },
                 // R[d] <- mem[addr]
                 OpCode::Load => {
-                    format!(
-                        "Op: {:?} - d:R[{:01X}] set from mem[{:02X}]={}({:04X})",
-                        op, d, addr, memory[addr as usize], memory[addr as usize] )
+                    if addr == 0xFF {
+                        format!(
+                            "Op: {:?} - input to d:R[{:01X}] via mem[{:02X}]",
+                            op, d, addr
+                        )
+                    } else {
+                        format!(
+                            "Op: {:?} - d:R[{:01X}] set from mem[{:02X}]={}({:04X})",
+                            op, d, addr, memory[addr as usize], memory[addr as usize])
+                    }
                 },
                 // mem[addr] <- R[d]
                 OpCode::Store => {
-                    format!(
-                        "Op: {:?} - mem[{:02X}] set from d:R[{:01X}]{}({:04X})",
-                        op, addr, d, dc, dc )
+                    if addr == 0xFF {
+                        format!(
+                            "Op: {:?} - output from d:R[{:01X}] via mem[{:02X}]",
+                            op, d, addr
+                        )
+                    } else {
+                        format!(
+                            "Op: {:?} - mem[{:02X}] set from d:R[{:01X}]{}({:04X})",
+                            op, addr, d, dc, dc )
+                    }
                 },
                 // R[d] <- mem[R[t]]
                 OpCode::LoadIndirect => {
-                    format!(
-                        "Op: {:?} - d:R[{:01X}] set from mem[t:R{:01X}]={}({:04X}) where t:R[{:01X}]={:04X}",
-                        op, d, t, memory[tc as usize], memory[tc as usize], t, tc)
+                    if tc == 255 {
+                        format!(
+                            "Op: {:?} - input to d:R[{:01X}] via mem[{:02X}] as indicated by t:R[{:01X}]",
+                            op, d, tc, t )
+                    } else {
+                        format!(
+                            "Op: {:?} - d:R[{:01X}] set from mem[t:R{:01X}]={}({:04X}) where t:R[{:01X}]={:04X}",
+                            op, d, t, memory[tc as usize], memory[tc as usize], t, tc)
+                    }
                 },
                 // mem[R[t]] <- R[d]
                 OpCode::StoreIndirect => {
-                    format!(
-                        "Op: {:?} - mem[t:R[{:01X}]={:04X}] set from d:R[{:01X}]{}({:04X})",
-                        op, t, tc, d, dc, dc)
+                    if tc == 255 {
+                        format!(
+                            "Op: {:?} - output from d:R[{:01X}] via mem[{:02X}] as indicated by t:R[{:01X}]",
+                            op, d, tc, t )
+                    } else {
+                        format!(
+                            "Op: {:?} - mem[t:R[{:01X}]={:04X}] set from d:R[{:01X}]{}({:04X})",
+                            op, t, tc, d, dc, dc)
+                        }
                 },
                 OpCode::BranchZero => {
                     format!("Op: {:?} - pc becomes {:02X} when d:R[{:01X}]={:?}({:04X}) == 0",
